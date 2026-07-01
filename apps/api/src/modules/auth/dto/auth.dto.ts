@@ -84,11 +84,42 @@ export class JoinChildFamilyDto {
   password: string;
 }
 
+export class ChildLoginDto {
+  @IsString()
+  @MinLength(6)
+  @MaxLength(6)
+  inviteCode: string;
+
+  @IsOptional()
+  @IsIn(["pin", "pattern"])
+  unlockType?: "pin" | "pattern";
+
+  @IsString()
+  @MinLength(4)
+  @MaxLength(16)
+  password: string;
+}
+
+export class SetChildPatternDto {
+  @IsString()
+  @MinLength(1)
+  userId: string;
+
+  @IsString()
+  @MinLength(4)
+  @MaxLength(9)
+  pattern: string;
+}
+
 export class LoginDto {
   @IsString()
   @MinLength(2)
   @MaxLength(80)
   username: string;
+
+  @IsOptional()
+  @IsIn(["pin", "pattern"])
+  unlockType?: "pin" | "pattern";
 
   @IsString()
   @MinLength(4)

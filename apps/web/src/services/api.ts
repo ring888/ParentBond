@@ -9,6 +9,8 @@ import type {
   HomeworkTask,
   LlmTaskParseRequest,
   LlmTaskParseResponse,
+  CreateMoodShareInput,
+  MoodShareSummary,
   ParentChildDetailSummary,
   ParentProfileSummary,
   CreateWalletEntryInput,
@@ -190,6 +192,18 @@ export async function fetchGameSummary(userId: string, date?: string): Promise<G
 
 export async function saveGameRecord(payload: GameRecordInput): Promise<GameSummary> {
   return requestJson<GameSummary>("/games/records", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchMoodShares(userId: string): Promise<MoodShareSummary> {
+  const params = new URLSearchParams({ userId });
+  return requestJson<MoodShareSummary>(`/memories?${params.toString()}`);
+}
+
+export async function createMoodShare(payload: CreateMoodShareInput): Promise<MoodShareSummary> {
+  return requestJson<MoodShareSummary>("/memories", {
     method: "POST",
     body: JSON.stringify(payload),
   });

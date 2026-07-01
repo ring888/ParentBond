@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, OnModuleInit, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, OnModuleInit, UnauthorizedException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -8,7 +8,7 @@ import { AuthUserEntity } from "../../database/entities/auth-user.entity";
 import { FocusRecordEntity } from "../../database/entities/focus-record.entity";
 import { LedgerEntryEntity } from "../../database/entities/ledger-entry.entity";
 import { TaskEntity } from "../../database/entities/task.entity";
-import { JoinChildFamilyDto, JoinFamilyDto, LoginDto, RegisterDto } from "./dto/auth.dto";
+import { ChildLoginDto, JoinChildFamilyDto, JoinFamilyDto, LoginDto, RegisterDto, SetChildPatternDto } from "./dto/auth.dto";
 
 const scrypt = promisify(scryptCallback);
 const sessionLifetimeMs = 30 * 24 * 60 * 60 * 1000;
@@ -32,6 +32,7 @@ export class AuthService implements OnModuleInit {
 
   async onModuleInit() {
     await this.ensureSessionLastSeenColumn();
+    await this.ensureAuthUserPatternHashColumn();
   }
 
   async register(dto: RegisterDto) {
@@ -60,7 +61,7 @@ export class AuthService implements OnModuleInit {
 
   async login(dto: LoginDto) {
     const user = await this.users.findOneBy({ username: dto.username.trim() });
-    if (!user || !(await this.verifyPassword(dto.password, user.passwordHash))) {
+    if (!user || !(await this.verifyCredential(user, dto.password, dto.unlockType ?? "pin"))) {
       throw new UnauthorizedException("账号或密码不正确");
     }
 
@@ -109,14 +110,7 @@ export class AuthService implements OnModuleInit {
     const existing = await this.users.findOneBy({ familyName: owner.familyName, role: "child" });
 
     if (existing) {
-      existing.displayName = childName;
-      existing.passwordHash = await this.hashPassword(dto.password);
-      existing.childName = childName;
-      existing.childGrade = owner.childGrade;
-      existing.childAvatar = childAvatar;
-      await this.users.save(existing);
-      await this.movePlaceholderChildData(owner, existing);
-      return this.createSession(existing);
+      throw new ConflictException("孩子已经加入家庭，请使用邀请码和 PIN 登录");
     }
 
     const user = await this.users.save(
@@ -135,6 +129,38 @@ export class AuthService implements OnModuleInit {
 
     await this.movePlaceholderChildData(owner, user);
     return this.createSession(user);
+  }
+
+  async loginChild(dto: ChildLoginDto) {
+    const inviteCode = dto.inviteCode.trim().toUpperCase();
+    const owner = await this.users.findOneBy({ inviteCode, role: "parent" });
+    if (!owner) {
+      throw new UnauthorizedException("邀请码无效或已失效");
+    }
+
+    const child = await this.users.findOneBy({ familyName: owner.familyName, role: "child" });
+    if (!child) {
+      throw new UnauthorizedException("孩子还没有加入家庭，请先完成首次加入");
+    }
+
+    if (!(await this.verifyCredential(child, dto.password, dto.unlockType ?? "pin"))) {
+      throw new UnauthorizedException(dto.unlockType === "pattern" ? "图案不正确，请重试" : "孩子 PIN 不正确，请重试");
+    }
+
+    return this.createSession(child);
+  }
+
+  async setChildPattern(dto: SetChildPatternDto) {
+    const child = await this.users.findOneBy({ id: dto.userId, role: "child" });
+    if (!child) {
+      throw new UnauthorizedException("没有找到孩子账号");
+    }
+
+    const pattern = this.normalizePattern(dto.pattern);
+    child.patternHash = await this.hashPassword(pattern);
+    await this.users.save(child);
+
+    return { ok: true };
   }
 
   async me(token: string) {
@@ -203,6 +229,31 @@ export class AuthService implements OnModuleInit {
     return timingSafeEqual(candidate, Buffer.from(storedHash, "hex"));
   }
 
+  private async verifyCredential(user: AuthUserEntity, value: string, unlockType: "pin" | "pattern") {
+    if (unlockType === "pattern") {
+      if (user.role !== "child") return false;
+      if (!user.patternHash) {
+        throw new UnauthorizedException("图案解锁还没有设置，请先用 PIN 登录后设置");
+      }
+      return this.verifyPassword(this.normalizePattern(value), user.patternHash);
+    }
+
+    return this.verifyPassword(value, user.passwordHash);
+  }
+
+  private normalizePattern(pattern: string) {
+    const value = pattern.trim();
+    if (!/^[1-9]{4,9}$/.test(value)) {
+      throw new BadRequestException("图案至少连接 4 个点，且只能包含 1-9");
+    }
+
+    if (new Set(value).size !== value.length) {
+      throw new BadRequestException("图案不能重复连接同一个点");
+    }
+
+    return value;
+  }
+
   private async createInviteCode() {
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const value = Array.from({ length: 6 }, () => inviteAlphabet[Math.floor(Math.random() * inviteAlphabet.length)]).join("");
@@ -256,5 +307,14 @@ export class AuthService implements OnModuleInit {
     if (Number(rows[0]?.count ?? 0) > 0) return;
 
     await this.dataSource.query("ALTER TABLE auth_sessions ADD COLUMN last_seen_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+  }
+
+  private async ensureAuthUserPatternHashColumn() {
+    const rows = await this.dataSource.query(
+      "SELECT COUNT(*) AS count FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'auth_users' AND COLUMN_NAME = 'pattern_hash'",
+    ) as Array<{ count: string | number }>;
+    if (Number(rows[0]?.count ?? 0) > 0) return;
+
+    await this.dataSource.query("ALTER TABLE auth_users ADD COLUMN pattern_hash VARCHAR(255) NULL AFTER password_hash");
   }
 }

@@ -15,6 +15,8 @@ export type AuthSession = {
   user: AuthUser;
 };
 
+export type UnlockType = "pin" | "pattern";
+
 export type RegisterAuthInput = {
   username: string;
   displayName: string;
@@ -40,6 +42,17 @@ export type JoinChildFamilyInput = {
   password: string;
 };
 
+export type ChildLoginInput = {
+  inviteCode: string;
+  password: string;
+  unlockType?: UnlockType;
+};
+
+export type SetChildPatternInput = {
+  userId: string;
+  pattern: string;
+};
+
 interface ApiEnvelope<T> {
   code: number;
   data: T;
@@ -58,6 +71,12 @@ function bodyMessage(body: unknown) {
 function friendlyAuthMessage(message: string, status: number, path: string) {
   if (message.includes("Cannot POST /api/v1/auth/join-child")) {
     return "孩子加入家庭接口还没有生效，请重启后端服务";
+  }
+  if (message.includes("Cannot POST /api/v1/auth/login-child")) {
+    return "孩子登录接口还没有生效，请重启后端服务";
+  }
+  if (message.includes("Cannot POST /api/v1/auth/child-pattern")) {
+    return "图案解锁接口还没有生效，请重启后端服务";
   }
   if (message.includes("password must be longer than or equal to 4 characters")) {
     return "请输入 4 位数字密码";
@@ -154,7 +173,7 @@ export function registerAuth(input: RegisterAuthInput) {
   });
 }
 
-export function loginAuth(input: { username: string; password: string }) {
+export function loginAuth(input: { username: string; password: string; unlockType?: UnlockType }) {
   return authRequest<AuthSession>("/auth/login", {
     method: "POST",
     body: JSON.stringify(input),
@@ -170,6 +189,20 @@ export function joinFamily(input: JoinFamilyInput) {
 
 export function joinChildFamily(input: JoinChildFamilyInput) {
   return authRequest<AuthSession>("/auth/join-child", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function loginChildByInvite(input: ChildLoginInput) {
+  return authRequest<AuthSession>("/auth/login-child", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function setChildPattern(input: SetChildPatternInput) {
+  return authRequest<{ ok: boolean }>("/auth/child-pattern", {
     method: "POST",
     body: JSON.stringify(input),
   });

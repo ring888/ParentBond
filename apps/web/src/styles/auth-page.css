@@ -208,14 +208,16 @@ canvas.sf{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
 @keyframes shakePin{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 
 /* numpad */
-.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:16px}
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:16px;touch-action:manipulation}
 .npk{
   height:58px;background:rgba(255,255,255,.05);
   border:1px solid rgba(255,255,255,.08);border-radius:16px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   cursor:pointer;transition:all .15s;user-select:none;color:inherit;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;will-change:transform;
 }
 .npk:active{background:rgba(255,255,255,.14);transform:scale(.95)}
+.npk:disabled{opacity:.5;cursor:wait}
 .npk.zero{grid-column:2}
 .npk-num{font-size:22px;font-weight:600;color:var(--text0);line-height:1}
 .npk-alpha{font-size:9px;color:var(--text2);letter-spacing:.1em;font-weight:500;margin-top:1px}
@@ -230,17 +232,21 @@ canvas.sf{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
   background:rgba(255,255,255,.03);border:1px solid var(--bd);
   border-radius:20px;position:relative;
   width:240px;margin:0 auto;
+  justify-items:center;align-items:center;touch-action:none;user-select:none;-webkit-user-select:none;
 }
+.pattern-grid.live{box-shadow:inset 0 0 24px rgba(167,139,250,.08)}
 .pat-node{
   width:36px;height:36px;border-radius:50%;
   background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.15);
   cursor:pointer;transition:all .15s;
   display:flex;align-items:center;justify-content:center;
   position:relative;z-index:2;
+  touch-action:none;-webkit-tap-highlight-color:transparent;
 }
 .pat-node.lit{background:rgba(167,139,250,.35);border-color:var(--purple);box-shadow:0 0 12px rgba(167,139,250,.5)}
 .pat-node.lit::after{content:'';width:10px;height:10px;background:var(--purple2);border-radius:50%;box-shadow:0 0 8px var(--purple)}
 .pattern-canvas{position:absolute;inset:0;pointer-events:none;border-radius:20px}
+.pattern-canvas polyline{fill:none;stroke:rgba(196,181,253,.86);stroke-width:7;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 7px rgba(167,139,250,.65))}
 .pattern-status{text-align:center;font-size:12px;color:var(--text2);margin-top:10px;min-height:18px}
 
 /* member card */

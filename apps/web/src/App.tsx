@@ -1,5 +1,6 @@
 import {
   type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
   type ReactNode,
   useCallback,
   useEffect,
@@ -17,7 +18,6 @@ import {
   GripVertical,
   ListChecks,
   LoaderCircle,
-  LockKeyhole,
   MoonStar,
   Pencil,
   Plus,
@@ -41,6 +41,7 @@ import type {
   GameSummaryItem,
   GameType,
   HomeworkTask,
+  MoodShareSummary,
   ParentChildDetailSummary,
   ParentProfileSummary,
   Subject,
@@ -54,18 +55,19 @@ import type {
 } from "@parentbond/shared";
 import { Starfield } from "./components/Starfield";
 import {
-  memories,
   navigation,
   quickCards,
   subjectMeta,
   type ViewId,
 } from "./data/mock";
 import {
+  createMoodShare,
   createWalletEntry,
   fetchCompanionFocus,
   fetchChildProfile,
   fetchFocusStats,
   fetchGameSummary,
+  fetchMoodShares,
   fetchParentChildDetail,
   fetchParentProfile,
   fetchTodayTasks,
@@ -83,12 +85,14 @@ import {
   uploadWalletEvidence,
 } from "./services/api";
 import type { AuthUser } from "./services/auth";
+import { setChildPattern } from "./services/auth";
 import { parseHomeworkLocally } from "./services/task-fallback";
 
 const DEFAULT_USER_ID = "demo-child-001";
 
 type TaskSyncStatus = "loading" | "live" | "offline" | "saving";
 type ProfileSyncStatus = "loading" | "live" | "offline" | "saving";
+type MemorySyncStatus = "loading" | "live" | "offline" | "saving";
 type TaskDropPlacement = "before" | "after";
 type FocusMode = "daily" | "task";
 type TaskFocusTimer = {
@@ -104,6 +108,27 @@ type StoredTaskFocusSession = {
 
 const TASK_FOCUS_STORAGE_KEY = "parentbond.task-focus.v1";
 const FOCUS_AUTO_FLUSH_SECONDS = 60;
+
+const moodOptions = [
+  { mood: "😊", label: "开心" },
+  { mood: "😌", label: "平静" },
+  { mood: "💪", label: "有力量" },
+  { mood: "😔", label: "有点难过" },
+  { mood: "😤", label: "有点生气" },
+  { mood: "✨", label: "想记录" },
+] as const;
+
+const patternNodePoints = [
+  { x: 44, y: 44 },
+  { x: 120, y: 44 },
+  { x: 196, y: 44 },
+  { x: 44, y: 120 },
+  { x: 120, y: 120 },
+  { x: 196, y: 120 },
+  { x: 44, y: 196 },
+  { x: 120, y: 196 },
+  { x: 196, y: 196 },
+];
 
 const emptyFocusStats: FocusStats = {
   completedSessionsToday: 0,
@@ -325,6 +350,9 @@ export function App({
   );
   const [taskEditor, setTaskEditor] = useState<TaskEditorDraft | null>(null);
   const [memoryText, setMemoryText] = useState("");
+  const [memoryMood, setMemoryMood] = useState("😊");
+  const [memorySummary, setMemorySummary] = useState<MoodShareSummary | null>(null);
+  const [memorySyncStatus, setMemorySyncStatus] = useState<MemorySyncStatus>("loading");
 
   const isParentSession = authUser ? authUser.role !== "child" : false;
   const taskOwnerUserId = isParentSession ? parentProfile?.child.userId ?? null : userId;
@@ -640,6 +668,25 @@ export function App({
     };
   }, [activeView, authUser?.role, userId]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    setMemorySyncStatus("loading");
+    void fetchMoodShares(userId)
+      .then((summary) => {
+        if (cancelled) return;
+        setMemorySummary(summary);
+        setMemorySyncStatus("live");
+      })
+      .catch(() => {
+        if (!cancelled) setMemorySyncStatus("offline");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
   const refreshVisibleProfile = useCallback(() => {
     if (authUser?.role === "child") {
       void fetchChildProfile(userId)
@@ -661,6 +708,22 @@ export function App({
       .then((detail) => setParentChildDetail(detail))
       .catch(() => undefined);
   }, [authUser?.role, userId]);
+
+  const saveMoodShare = useCallback(() => {
+    const content = memoryText.trim();
+    if (!content || memorySyncStatus === "saving") return;
+
+    setMemorySyncStatus("saving");
+    void createMoodShare({ userId, mood: memoryMood, content })
+      .then((summary) => {
+        setMemorySummary(summary);
+        setMemoryText("");
+        setMemorySyncStatus("live");
+      })
+      .catch(() => {
+        setMemorySyncStatus("offline");
+      });
+  }, [memoryMood, memorySyncStatus, memoryText, userId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1247,6 +1310,19 @@ export function App({
       });
   };
 
+  const saveChildUnlockPattern = (pattern: string) => {
+    setProfileSyncStatus("saving");
+    void setChildPattern({ userId, pattern })
+      .then(() => updateChildProfile({ userId, pinMode: "pattern" }))
+      .then((profile) => {
+        setChildProfile(profile);
+        setProfileSyncStatus("live");
+      })
+      .catch(() => {
+        setProfileSyncStatus("offline");
+      });
+  };
+
   const saveParentProfile = (input: Omit<UpdateParentProfileInput, "userId">) => {
     setProfileSyncStatus("saving");
     void updateParentProfile({ userId, ...input })
@@ -1521,7 +1597,15 @@ export function App({
             />
           )}
           {activeView === "memory" && (
-            <MemoryView memoryText={memoryText} onMemoryText={setMemoryText} />
+            <MemoryView
+              memoryText={memoryText}
+              memoryMood={memoryMood}
+              memorySummary={memorySummary}
+              memorySyncStatus={memorySyncStatus}
+              onMemoryText={setMemoryText}
+              onMemoryMood={setMemoryMood}
+              onSaveMemory={saveMoodShare}
+            />
           )}
           {activeView === "profile" && (
             authUser?.role === "child" ? (
@@ -1536,6 +1620,7 @@ export function App({
                 }}
                 onLogout={onLogout ?? (() => navigateToView("home"))}
                 onSaveProfile={saveChildProfile}
+                onSavePattern={saveChildUnlockPattern}
               />
             ) : (
               <ParentProfileView
@@ -5174,55 +5259,113 @@ function fallbackWalletBuckets(): WalletSummary["weekBuckets"] {
 
 function MemoryView({
   memoryText,
+  memoryMood,
+  memorySummary,
+  memorySyncStatus,
   onMemoryText,
+  onMemoryMood,
+  onSaveMemory,
 }: {
   memoryText: string;
+  memoryMood: string;
+  memorySummary: MoodShareSummary | null;
+  memorySyncStatus: MemorySyncStatus;
   onMemoryText: (value: string) => void;
+  onMemoryMood: (value: string) => void;
+  onSaveMemory: () => void;
 }) {
+  const syncText =
+    memorySyncStatus === "saving"
+      ? "保存中"
+      : memorySyncStatus === "loading"
+        ? "同步中"
+        : memorySyncStatus === "offline"
+          ? "离线"
+          : "已同步";
+  const records = memorySummary?.items ?? [];
+  const canSave = memoryText.trim().length > 0 && memorySyncStatus !== "saving";
+
   return (
     <section className="view-stack">
       <div className="memory-input-card">
-        <span className="label-dot">本周闪光时刻</span>
+        <div className="memory-input-head">
+          <span className="label-dot">心情分享</span>
+          <em className={memorySyncStatus === "offline" ? "memory-sync offline" : "memory-sync"}>{syncText}</em>
+        </div>
+        <div className="mood-picker" aria-label="选择心情">
+          {moodOptions.map((item) => (
+            <button
+              key={item.mood}
+              className={memoryMood === item.mood ? "mood-chip active" : "mood-chip"}
+              type="button"
+              onClick={() => onMemoryMood(item.mood)}
+              aria-label={item.label}
+            >
+              <span aria-hidden="true">{item.mood}</span>
+              <em>{item.label}</em>
+            </button>
+          ))}
+        </div>
         <textarea
           value={memoryText}
           onChange={(event) => onMemoryText(event.target.value)}
-          placeholder="写一句今天让你觉得自己很棒的事..."
-          maxLength={120}
+          placeholder="今天心情怎么样？可以写给爸爸妈妈，也可以写给自己。"
+          maxLength={240}
         />
         <div className="memory-actions">
-          <span>{memoryText.length}/120</span>
-          <button className="primary-button compact" type="button">
+          <span>{memoryText.length}/240</span>
+          <button className="primary-button compact" type="button" disabled={!canSave} onClick={onSaveMemory}>
             <Send size={16} />
-            保存
+            {memorySyncStatus === "saving" ? "保存中" : "分享"}
           </button>
         </div>
       </div>
 
-      <SectionHeader title="成长时间线" action="筛选" />
+      <SectionHeader title="家庭心情流" action={records.length ? `${records.length} 条` : "今天开始"} />
       <div className="memory-list">
-        {memories.map((memory) => (
-          <article key={memory.text} className="memory-card">
-            <span>{memory.week}</span>
-            <p>{memory.text}</p>
-            <footer>
-              <strong>{memory.author}</strong>
-              {memory.locked ? (
-                <em>
-                  <LockKeyhole size={12} />
-                  18 岁后见
-                </em>
-              ) : (
+        {records.length ? (
+          records.map((memory) => (
+            <article key={memory.id} className="memory-card">
+              <div className="memory-card-head">
+                <span className="memory-avatar" aria-hidden="true">{memory.authorAvatar}</span>
+                <div>
+                  <strong>{memory.authorName}</strong>
+                  <span className="memory-meta">
+                    {formatMemoryDate(memory.createdAt)}
+                    <em>{memory.mood}</em>
+                  </span>
+                </div>
+              </div>
+              <p>{memory.content}</p>
+              <footer>
+                <strong>{memory.authorRole === "child" ? "孩子分享" : "家人回应"}</strong>
                 <em>
                   <MoonStar size={12} />
-                  可回看
+                  已同步
                 </em>
-              )}
-            </footer>
-          </article>
-        ))}
+              </footer>
+            </article>
+          ))
+        ) : (
+          <div className="memory-empty-state">
+            <span aria-hidden="true">🌙</span>
+            <strong>还没有心情分享</strong>
+            <p>从一句“今天我有点开心”开始，这里会慢慢长成家庭的小小心情日记。</p>
+          </div>
+        )}
       </div>
     </section>
   );
+}
+
+function formatMemoryDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "刚刚";
+  const today = localDateString();
+  const target = localDateString(date);
+  const time = date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+  if (target === today) return `今天 ${time}`;
+  return date.toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 function ParentProfileView({
@@ -5447,6 +5590,7 @@ function ChildProfileView({
   fallback,
   onLogout,
   onSaveProfile,
+  onSavePattern,
 }: {
   profile: ChildProfileSummary | null;
   profileSyncStatus: ProfileSyncStatus;
@@ -5458,9 +5602,14 @@ function ChildProfileView({
   };
   onLogout: () => void;
   onSaveProfile: (input: Omit<UpdateChildProfileInput, "userId">) => void;
+  onSavePattern: (pattern: string) => void;
 }) {
   const [nameDraft, setNameDraft] = useState(profile?.childName ?? fallback.childName);
   const [gradeDraft, setGradeDraft] = useState(profile?.childGrade ?? fallback.childGrade);
+  const [patternSetupOpen, setPatternSetupOpen] = useState(false);
+  const [patternDraft, setPatternDraft] = useState("");
+  const [patternStep, setPatternStep] = useState<"first" | "confirm">("first");
+  const [patternMessage, setPatternMessage] = useState("画一个至少 4 个点的图案");
   const childName = profile?.childName ?? fallback.childName;
   const childGrade = profile?.childGrade ?? fallback.childGrade;
   const childAvatar = profile?.childAvatar ?? fallback.childAvatar;
@@ -5560,6 +5709,34 @@ function ChildProfileView({
     setProfileFeedback("正在保存解锁方式...");
     onSaveProfile({ pinMode });
   };
+  const openPatternSetup = () => {
+    setPatternDraft("");
+    setPatternStep("first");
+    setPatternMessage("画一个至少 4 个点的图案");
+    setPatternSetupOpen(true);
+  };
+  const handlePatternCandidate = (pattern: string) => {
+    if (pattern.length < 4) {
+      setPatternMessage("至少连接 4 个点");
+      return;
+    }
+    if (patternStep === "first") {
+      setPatternDraft(pattern);
+      setPatternStep("confirm");
+      setPatternMessage("再画一次确认图案");
+      return;
+    }
+    if (pattern !== patternDraft) {
+      setPatternDraft("");
+      setPatternStep("first");
+      setPatternMessage("两次图案不一致，请重新设置");
+      return;
+    }
+    childSavePendingRef.current = true;
+    setProfileFeedback("正在保存图案...");
+    setPatternSetupOpen(false);
+    onSavePattern(pattern);
+  };
 
   return (
     <section className="view-stack child-profile-view">
@@ -5631,10 +5808,10 @@ function ChildProfileView({
           <div className="si-body"><div className="si-title">数字密码</div><div className="si-sub">当前：4 位数字密码</div></div>
           <div className="si-right"><div className={settings.pinMode === "pin" ? "si-badge on" : "si-badge"}>启用</div></div>
         </button>
-        <button className="si" type="button" onClick={() => savePinMode("pattern")} disabled={profileSyncStatus === "saving"}>
+        <button className="si" type="button" onClick={openPatternSetup} disabled={profileSyncStatus === "saving"}>
           <div className="si-icon lavender">🔷</div>
-          <div className="si-body"><div className="si-title">图案解锁</div><div className="si-sub">划出你的专属图案</div></div>
-          <div className="si-right"><div className={settings.pinMode === "pattern" ? "si-badge on" : "si-badge"}>启用</div></div>
+          <div className="si-body"><div className="si-title">图案解锁</div><div className="si-sub">{settings.pinMode === "pattern" ? "重新设置你的专属图案" : "划出你的专属图案"}</div></div>
+          <div className="si-right"><div className={settings.pinMode === "pattern" ? "si-badge on" : "si-badge"}>{settings.pinMode === "pattern" ? "已启用" : "设置"}</div></div>
         </button>
       </div>
 
@@ -5658,7 +5835,133 @@ function ChildProfileView({
       </div>
 
       <button className="btn btn-red profile-exit-button" type="button" onClick={onLogout}>退出登录</button>
+      <PatternSetupSheet
+        open={patternSetupOpen}
+        message={patternMessage}
+        step={patternStep}
+        onCancel={() => setPatternSetupOpen(false)}
+        onComplete={handlePatternCandidate}
+      />
     </section>
+  );
+}
+
+function PatternSetupSheet({
+  open,
+  message,
+  step,
+  onCancel,
+  onComplete,
+}: {
+  open: boolean;
+  message: string;
+  step: "first" | "confirm";
+  onCancel: () => void;
+  onComplete: (pattern: string) => void;
+}) {
+  if (!open) return null;
+
+  return (
+    <div className="pattern-sheet-backdrop" role="dialog" aria-modal="true" aria-label="设置图案解锁">
+      <div className="pattern-sheet">
+        <button className="pattern-sheet-close" type="button" onClick={onCancel} aria-label="关闭">
+          <X size={18} />
+        </button>
+        <div className="pattern-sheet-icon">🔷</div>
+        <strong>{step === "first" ? "设置图案解锁" : "确认图案"}</strong>
+        <p>{message}</p>
+        <PatternPad onComplete={onComplete} />
+        <button className="btn btn-ghost pattern-sheet-cancel" type="button" onClick={onCancel}>取消</button>
+      </div>
+    </div>
+  );
+}
+
+function PatternPad({ onComplete }: { onComplete: (pattern: string) => void }) {
+  const [path, setPath] = useState<number[]>([]);
+  const [status, setStatus] = useState("按住星点滑动");
+  const nodeRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const pathRef = useRef<number[]>([]);
+  const activeRef = useRef(false);
+
+  const setPathValue = (next: number[]) => {
+    pathRef.current = next;
+    setPath(next);
+  };
+
+  const addNode = (node: number) => {
+    const current = pathRef.current;
+    if (current.includes(node)) return;
+    setPathValue([...current, node]);
+    setStatus(current.length >= 2 ? "松手完成" : "继续连接");
+  };
+
+  const nodeFromPoint = (clientX: number, clientY: number) => {
+    for (const [index, node] of nodeRefs.current.entries()) {
+      if (!node) continue;
+      const rect = node.getBoundingClientRect();
+      const padding = 14;
+      if (clientX >= rect.left - padding && clientX <= rect.right + padding && clientY >= rect.top - padding && clientY <= rect.bottom + padding) {
+        return index + 1;
+      }
+    }
+    return null;
+  };
+
+  const begin = (event: ReactPointerEvent<HTMLDivElement>) => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    activeRef.current = true;
+    setPathValue([]);
+    setStatus("继续连接");
+    const node = nodeFromPoint(event.clientX, event.clientY);
+    if (node) addNode(node);
+  };
+
+  const move = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!activeRef.current) return;
+    const node = nodeFromPoint(event.clientX, event.clientY);
+    if (node) addNode(node);
+  };
+
+  const finish = () => {
+    if (!activeRef.current) return;
+    activeRef.current = false;
+    const pattern = pathRef.current.join("");
+    if (pattern.length < 4) {
+      setStatus("至少连接 4 个点");
+      window.setTimeout(() => {
+        setPathValue([]);
+        setStatus("按住星点滑动");
+      }, 650);
+      return;
+    }
+    onComplete(pattern);
+    setPathValue([]);
+    setStatus("按住星点滑动");
+  };
+
+  return (
+    <>
+      <div className="profile-pattern-grid" onPointerDown={begin} onPointerMove={move} onPointerUp={finish} onPointerCancel={finish} onPointerLeave={finish}>
+        {path.length > 1 ? (
+          <svg className="profile-pattern-canvas" viewBox="0 0 240 240" aria-hidden="true">
+            <polyline points={path.map((node) => `${patternNodePoints[node - 1]?.x ?? 0},${patternNodePoints[node - 1]?.y ?? 0}`).join(" ")} />
+          </svg>
+        ) : null}
+        {Array.from({ length: 9 }, (_, index) => (
+          <button
+            key={index}
+            ref={(element) => {
+              nodeRefs.current[index] = element;
+            }}
+            className={path.includes(index + 1) ? "profile-pattern-node lit" : "profile-pattern-node"}
+            type="button"
+            aria-label={`图案点 ${index + 1}`}
+          />
+        ))}
+      </div>
+      <div className="profile-pattern-status">{status}</div>
+    </>
   );
 }
 

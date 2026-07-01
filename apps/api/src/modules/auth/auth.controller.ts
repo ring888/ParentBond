@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Headers, Post, UnauthorizedException } from "@nestjs/common";
 import { AuthService } from "./auth.service";
-import { JoinChildFamilyDto, JoinFamilyDto, LoginDto, RegisterDto } from "./dto/auth.dto";
+import { ChildLoginDto, JoinChildFamilyDto, JoinFamilyDto, LoginDto, RegisterDto, SetChildPatternDto } from "./dto/auth.dto";
 
 @Controller("auth")
 export class AuthController {
@@ -24,6 +24,16 @@ export class AuthController {
   @Post("join-child")
   async joinChildFamily(@Body() dto: JoinChildFamilyDto) {
     return this.ok(await this.authService.joinChildFamily(dto));
+  }
+
+  @Post("login-child")
+  async loginChild(@Body() dto: ChildLoginDto) {
+    return this.ok(await this.authService.loginChild(dto));
+  }
+
+  @Post("child-pattern")
+  async setChildPattern(@Body() dto: SetChildPatternDto) {
+    return this.ok(await this.authService.setChildPattern(dto));
   }
 
   @Get("me")

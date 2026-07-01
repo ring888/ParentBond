@@ -20,6 +20,9 @@ export class AuthUserEntity {
   @Column({ name: "password_hash", type: "varchar", length: 255 })
   passwordHash: string;
 
+  @Column({ name: "pattern_hash", type: "varchar", length: 255, nullable: true })
+  patternHash?: string | null;
+
   @Column({ name: "child_name", type: "varchar", length: 80, nullable: true })
   childName?: string | null;
 

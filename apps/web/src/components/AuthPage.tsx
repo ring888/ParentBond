@@ -1,5 +1,5 @@
-import { type RefObject, useEffect, useRef, useState } from "react";
-import { joinChildFamily, joinFamily, loginAuth, registerAuth, type AuthSession } from "../services/auth";
+import { type PointerEvent as ReactPointerEvent, type RefObject, useEffect, useRef, useState } from "react";
+import { joinChildFamily, joinFamily, loginAuth, loginChildByInvite, registerAuth, type AuthSession, type UnlockType } from "../services/auth";
 import "../styles/auth-page.css";
 
 type Screen =
@@ -15,6 +15,7 @@ type Screen =
   | "loginWho"
   | "login"
   | "childLogin"
+  | "childInviteLogin"
   | "childJoin"
   | "childPin"
   | "done";
@@ -32,6 +33,18 @@ const avatars = [
   ["🦄", "独角兽"],
   ["🚀", "火箭"],
 ] as const;
+
+const patternNodePoints = [
+  { x: 44, y: 44 },
+  { x: 120, y: 44 },
+  { x: 196, y: 44 },
+  { x: 44, y: 120 },
+  { x: 120, y: 120 },
+  { x: 196, y: 120 },
+  { x: 44, y: 196 },
+  { x: 120, y: 196 },
+  { x: 196, y: 196 },
+];
 
 type SavedChildLogin = {
   username: string;
@@ -90,7 +103,7 @@ function LogoMark({ centered = false }: { centered?: boolean }) {
   );
 }
 
-function useStarfield(canvasRef: RefObject<HTMLCanvasElement | null>) {
+function useStarfield(canvasRef: RefObject<HTMLCanvasElement | null>, active = true) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -107,7 +120,7 @@ function useStarfield(canvasRef: RefObject<HTMLCanvasElement | null>) {
     }));
     let frame = 0;
 
-    const draw = (time: number) => {
+    const paint = (time: number) => {
       const rect = canvas.getBoundingClientRect();
       const scale = window.devicePixelRatio || 1;
       const width = Math.max(1, Math.round(rect.width * scale));
@@ -126,12 +139,18 @@ function useStarfield(canvasRef: RefObject<HTMLCanvasElement | null>) {
         context.fillStyle = `rgba(255,255,255,${Math.max(0, alpha)})`;
         context.fill();
       }
-      frame = requestAnimationFrame(draw);
+    };
+
+    const draw = (time: number) => {
+      paint(time);
+      if (active) {
+        frame = requestAnimationFrame(draw);
+      }
     };
 
     frame = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(frame);
-  }, [canvasRef]);
+  }, [active, canvasRef]);
 }
 
 export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthSession) => void }) {
@@ -149,6 +168,8 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
   const [childJoinCode, setChildJoinCode] = useState("");
   const [childJoinName, setChildJoinName] = useState("");
   const [childJoinPin, setChildJoinPin] = useState("");
+  const [childLoginCode, setChildLoginCode] = useState("");
+  const [childLoginPin, setChildLoginPin] = useState("");
   const [elderName, setElderName] = useState("");
   const [elderPassword, setElderPassword] = useState("");
   const [loginUsername, setLoginUsername] = useState("");
@@ -159,8 +180,14 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
   const [savedChild, setSavedChild] = useState<SavedChildLogin | null>(() => readSavedChildLogin());
   const [pin, setPin] = useState("");
   const [pinMode, setPinMode] = useState<"pin" | "pattern">("pin");
+  const [patternPath, setPatternPath] = useState<number[]>([]);
+  const [patternStatus, setPatternStatus] = useState("滑动连接点来解锁");
+  const patternNodeRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const patternPathRef = useRef<number[]>([]);
+  const patternActiveRef = useRef(false);
+  const unlockDelayRef = useRef<number | null>(null);
 
-  useStarfield(canvasRef);
+  useStarfield(canvasRef, screen !== "childPin");
 
   useEffect(() => {
     const ready = window.setTimeout(() => setScreen("welcome"), 780);
@@ -174,6 +201,12 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
     const timer = window.setTimeout(() => setToast(""), 2200);
     return () => window.clearTimeout(timer);
   }, [toast]);
+
+  useEffect(() => () => {
+    if (unlockDelayRef.current) {
+      window.clearTimeout(unlockDelayRef.current);
+    }
+  }, []);
 
   const move = (next: Screen) => {
     setScreen(next);
@@ -302,6 +335,27 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
     }
   };
 
+  const loginChildWithInvite = async () => {
+    if (childLoginCode.trim().length !== 6 || childLoginPin.length < 4) {
+      setToast("请输入家庭邀请码和 4 位 PIN");
+      return;
+    }
+
+    setPending(true);
+    try {
+      enterApp(
+        await loginChildByInvite({
+          inviteCode: childLoginCode.trim(),
+          password: childLoginPin,
+        }),
+      );
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "孩子登录失败，请重试");
+    } finally {
+      setPending(false);
+    }
+  };
+
   const copyInvite = async () => {
     try {
       await navigator.clipboard?.writeText(inviteCode);
@@ -311,35 +365,122 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
     }
   };
 
-  const loginChildWithPin = async (pinValue: string) => {
+  const loginChildWithCredential = async (credential: string, unlockType: UnlockType) => {
     if (pending) return;
 
     if (!savedChild) {
       setPin("");
-      setToast("先用邀请码加入家庭");
-      move("childJoin");
+      setPatternPath([]);
+      patternPathRef.current = [];
+      setToast("请输入家庭邀请码和 PIN 登录");
+      move("childInviteLogin");
       return;
     }
 
     setPending(true);
     try {
-      enterApp(await loginAuth({ username: savedChild.username, password: pinValue }));
+      enterApp(await loginAuth({ username: savedChild.username, password: credential, unlockType }));
     } catch (error) {
-      setToast(error instanceof Error ? error.message : "PIN 不正确，请重试");
+      setToast(error instanceof Error ? error.message : unlockType === "pattern" ? "图案不正确，请重试" : "PIN 不正确，请重试");
     } finally {
       setPin("");
+      setPatternPath([]);
+      patternPathRef.current = [];
+      setPatternStatus("滑动连接点来解锁");
       setPending(false);
     }
+  };
+
+  const scheduleCredentialLogin = (credential: string, unlockType: UnlockType) => {
+    if (unlockDelayRef.current) {
+      window.clearTimeout(unlockDelayRef.current);
+    }
+    unlockDelayRef.current = window.setTimeout(() => {
+      unlockDelayRef.current = null;
+      void loginChildWithCredential(credential, unlockType);
+    }, unlockType === "pin" ? 120 : 60);
   };
 
   const enterPin = (key: string) => {
     if (pending) return;
 
-    const next = `${pin}${key}`.slice(0, 4);
-    setPin(next);
-    if (next.length === 4) {
-      void loginChildWithPin(next);
+    setPin((current) => {
+      if (current.length >= 4) return current;
+      const next = `${current}${key}`.slice(0, 4);
+      if (next.length === 4) {
+        scheduleCredentialLogin(next, "pin");
+      }
+      return next;
+    });
+  };
+
+  const deletePin = () => {
+    if (unlockDelayRef.current) {
+      window.clearTimeout(unlockDelayRef.current);
+      unlockDelayRef.current = null;
     }
+    setPin((value) => value.slice(0, -1));
+  };
+
+  const setPatternPathValue = (next: number[]) => {
+    patternPathRef.current = next;
+    setPatternPath(next);
+  };
+
+  const addPatternNode = (node: number) => {
+    const current = patternPathRef.current;
+    if (current.includes(node)) return;
+    setPatternPathValue([...current, node]);
+    setPatternStatus(current.length >= 2 ? "松手完成解锁" : "继续连接星点");
+  };
+
+  const nodeFromPoint = (clientX: number, clientY: number) => {
+    for (const [index, node] of patternNodeRefs.current.entries()) {
+      if (!node) continue;
+      const rect = node.getBoundingClientRect();
+      const hitPadding = 14;
+      if (
+        clientX >= rect.left - hitPadding &&
+        clientX <= rect.right + hitPadding &&
+        clientY >= rect.top - hitPadding &&
+        clientY <= rect.bottom + hitPadding
+      ) {
+        return index + 1;
+      }
+    }
+    return null;
+  };
+
+  const beginPattern = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (pending) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    patternActiveRef.current = true;
+    setPatternPathValue([]);
+    setPatternStatus("继续连接星点");
+    const node = nodeFromPoint(event.clientX, event.clientY);
+    if (node) addPatternNode(node);
+  };
+
+  const movePattern = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!patternActiveRef.current || pending) return;
+    const node = nodeFromPoint(event.clientX, event.clientY);
+    if (node) addPatternNode(node);
+  };
+
+  const finishPattern = () => {
+    if (!patternActiveRef.current || pending) return;
+    patternActiveRef.current = false;
+    const pattern = patternPathRef.current.join("");
+    if (pattern.length < 4) {
+      setPatternStatus("至少连接 4 个点");
+      window.setTimeout(() => {
+        setPatternPathValue([]);
+        setPatternStatus("滑动连接点来解锁");
+      }, 650);
+      return;
+    }
+    setPatternStatus("正在验证图案...");
+    scheduleCredentialLogin(pattern, "pattern");
   };
 
   const displayFamily = session?.user.familyName || familyName || "陈家大家庭";
@@ -388,7 +529,7 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
               <div className="page-title">你是？</div>
               <div className="page-sub">选择你在家庭中的角色</div>
               <div className="role-cards">
-                <RoleCard role="parent" active={role === "parent"} onClick={() => setRole("parent")} icon="👨‍👩‍👧" title="家长" sub={<>爸爸或妈妈<br />创建家庭账号</>} />
+                <RoleCard role="parent" active={role === "parent"} onClick={() => setRole("parent")} icon="👨" title="家长" sub={<>爸爸或妈妈<br />创建家庭账号</>} />
                 <RoleCard role="elder" active={role === "elder"} onClick={() => setRole("elder")} icon="👴👵" title="其他家人" sub={<>祖父母等<br />用邀请码加入</>} gold />
               </div>
               <div className="info-row"><div className="info-icon">💡</div><div className="info-txt">孩子的账号由家长创建并发送邀请码，孩子无需在此注册</div></div>
@@ -476,7 +617,7 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
             <div className="pv on" style={{ paddingTop: 28 }}>
               <BackButton onClick={() => move("welcome")} />
               <div className="page-title">选择登录方式</div><div className="page-sub">你是谁？</div>
-              <div className="role-cards"><RoleCard role="parent" active={false} onClick={() => move("login")} icon="👨‍👩‍👧" title="家长 / 家人" sub={<>账号 + 密码<br />进入管理界面</>} showCheck={false} glowColor="rgba(96,165,250,.6)" /><RoleCard role="elder" active={false} onClick={() => move("childLogin")} icon="🧒" title="孩子" sub={<>选我的头像<br />输密码进入</>} gold showCheck={false} glowColor="rgba(245,200,66,.5)" /></div>
+              <div className="role-cards"><RoleCard role="parent" active={false} onClick={() => move("login")} icon="👨" title="家长 / 家人" sub={<>账号 + 密码<br />进入管理界面</>} showCheck={false} glowColor="rgba(96,165,250,.6)" /><RoleCard role="elder" active={false} onClick={() => move("childLogin")} icon="🧒" title="孩子" sub={<>选我的头像<br />输密码进入</>} gold showCheck={false} glowColor="rgba(245,200,66,.5)" /></div>
               <div className="divider"><div className="divider-line" /><div className="divider-txt">或者</div><div className="divider-line" /></div>
               <div className="info-row"><div className="info-icon">👴</div><div className="info-txt">其他家人请用账号密码登录，登录方式同家长</div></div>
               <button type="button" className="btn-ghost" onClick={() => move("login")}>其他家人 / 密码登录</button>
@@ -499,21 +640,33 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
             <div className="pv on" style={{ paddingTop: 28 }}>
               <BackButton onClick={() => move("loginWho")} /><div className="page-title">你好！</div><div className="page-sub">选择你的头像来登录</div>
               <div className="face-row single">
-                <button type="button" className="face-card sel wide" onClick={() => move(savedChild ? "childPin" : "childJoin")}>
+                <button type="button" className="face-card sel wide" onClick={() => move(savedChild ? "childPin" : "childInviteLogin")}>
                   <div className="face-av">{displayAvatar}</div>
                   <div className="face-name">{displayChild}</div>
-                  <div style={{ fontSize: 10, color: "var(--text2)", marginTop: 1 }}>{savedChild ? `${displayGrade} · 点击解锁` : "还没有加入家庭"}</div>
+                  <div style={{ fontSize: 10, color: "var(--text2)", marginTop: 1 }}>{savedChild ? `${displayGrade} · 点击解锁` : "换设备登录或首次加入"}</div>
                 </button>
               </div>
-              <button type="button" className="btn-ghost" onClick={() => move("childJoin")}>我有邀请码，加入家庭</button>
-              <div style={{ background: "rgba(255,255,255,.03)", border: "1px solid var(--bd)", borderRadius: 14, padding: "12px 14px", textAlign: "center", fontSize: 12, color: "var(--text2)" }}>{savedChild ? "这里只显示孩子自己的头像" : "先用家长给的邀请码完成孩子账号设置"}</div>
+              <button type="button" className="btn-primary gold" onClick={() => move(savedChild ? "childPin" : "childInviteLogin")}>{savedChild ? "输入 PIN 登录" : "我已加入，换设备登录"}</button>
+              <button type="button" className="btn-ghost" onClick={() => move("childJoin")}>第一次加入家庭</button>
+              <div style={{ background: "rgba(255,255,255,.03)", border: "1px solid var(--bd)", borderRadius: 14, padding: "12px 14px", textAlign: "center", fontSize: 12, color: "var(--text2)" }}>{savedChild ? "这里只显示孩子自己的头像" : "已加入的孩子只需要家庭邀请码和 PIN，不用重新填写资料"}</div>
+            </div>
+          ) : null}
+
+          {screen === "childInviteLogin" ? (
+            <div className="pv on" style={{ paddingTop: 28 }}>
+              <BackButton onClick={() => move("childLogin")} />
+              <div className="page-title">孩子登录</div><div className="page-sub">换设备时，用家庭邀请码和孩子自己的 PIN 登录</div>
+              <div className="inp-group"><label className="inp-label">家庭邀请码（6 位）</label><input className="inp" maxLength={6} value={childLoginCode} onChange={(event) => setChildLoginCode(event.target.value.toUpperCase())} placeholder="例：BK7294" style={{ fontSize: 28, fontWeight: 700, letterSpacing: 8, textAlign: "center", textTransform: "uppercase" }} /></div>
+              <div className="inp-group"><label className="inp-label">4 位 PIN</label><div className="inp-icon-wrap"><span className="inp-icon">🔢</span><input className="inp" inputMode="numeric" maxLength={4} type="password" value={childLoginPin} onChange={(event) => setChildLoginPin(event.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="加入家庭时设置的 PIN" /></div></div>
+              <button type="button" className="btn-primary gold" disabled={pending} onClick={() => void loginChildWithInvite()}>{pending ? "正在登录..." : "登录孩子账号"}</button>
+              <button type="button" className="btn-ghost" onClick={() => move("childJoin")}>还没加入？先完成首次加入</button>
             </div>
           ) : null}
 
           {screen === "childJoin" ? (
             <div className="pv on" style={{ paddingTop: 28 }}>
               <BackButton onClick={() => move("childLogin")} />
-              <div className="page-title">加入家庭</div><div className="page-sub">输入家长给你的邀请码，设置自己的 PIN</div>
+              <div className="page-title">第一次加入家庭</div><div className="page-sub">输入家长给你的邀请码，设置自己的头像和 PIN</div>
               <div className="inp-group"><label className="inp-label">邀请码（6 位）</label><input className="inp" maxLength={6} value={childJoinCode} onChange={(event) => setChildJoinCode(event.target.value.toUpperCase())} placeholder="例：BK7294" style={{ fontSize: 28, fontWeight: 700, letterSpacing: 8, textAlign: "center", textTransform: "uppercase" }} /></div>
               <InputGroup label="你的昵称" icon="🧒" placeholder="例：小明" value={childJoinName} onChange={setChildJoinName} />
               <div className="inp-group"><label className="inp-label">选择你的头像</label><div className="avatar-grid">{avatars.map(([avatar, label]) => <button key={avatar} type="button" className={`av-item ${childAvatar === avatar ? "sel" : ""}`} onClick={() => setChildAvatar(avatar)}><span>{avatar}</span><div className="av-item-lbl">{label}</div></button>)}</div></div>
@@ -526,8 +679,8 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
             <div className="pv on" style={{ paddingTop: 28, textAlign: "center" }}>
               <BackButton onClick={() => move("childLogin")} label="换一个人" />
               <div style={{ fontSize: 52, marginBottom: 8 }}>{displayAvatar}</div><div style={{ fontSize: 18, fontWeight: 700, color: "var(--text0)", marginBottom: 4 }}>{displayChild}，你好！</div><div style={{ fontSize: 13, color: "var(--text2)", marginBottom: 24 }}>输入 4 位密码解锁</div>
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}><div style={{ display: "flex", background: "rgba(255,255,255,.05)", border: "1px solid var(--bd)", borderRadius: 99, padding: 3, gap: 3 }}><button type="button" className="auth-mode-button" style={pinMode === "pin" ? activeModeStyle : undefined} onClick={() => setPinMode("pin")}>🔢 数字密码</button><button type="button" className="auth-mode-button" style={pinMode === "pattern" ? activeModeStyle : undefined} onClick={() => setPinMode("pattern")}>🔣 图案解锁</button></div></div>
-              {pinMode === "pin" ? <><div className="pin-row">{Array.from({ length: 4 }, (_, index) => <div key={index} className={`pin-box ${index < pin.length ? "filled" : ""} ${index === pin.length ? "active" : ""}`} />)}</div><div className="numpad">{["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((key) => <button type="button" className="npk" key={key} onClick={() => enterPin(key)}><div className="npk-num">{key}</div></button>)}<div /><button type="button" className="npk zero" onClick={() => enterPin("0")}><div className="npk-num">0</div></button><button type="button" className="npk del" onClick={() => setPin((value) => value.slice(0, -1))}><div className="npk-num">⌫</div></button></div></> : <div className="pattern-wrap"><div className="pattern-grid">{Array.from({ length: 9 }, (_, index) => <button type="button" className="pat-node" key={index} onClick={() => setToast("孩子账号将在家庭设置中启用")} />)}</div><div className="pattern-status">滑动连接点来解锁</div></div>}
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}><div style={{ display: "flex", background: "rgba(255,255,255,.05)", border: "1px solid var(--bd)", borderRadius: 99, padding: 3, gap: 3 }}><button type="button" className="auth-mode-button" style={pinMode === "pin" ? activeModeStyle : undefined} onClick={() => { setPinMode("pin"); setPatternPathValue([]); setPatternStatus("滑动连接点来解锁"); }}>🔢 数字密码</button><button type="button" className="auth-mode-button" style={pinMode === "pattern" ? activeModeStyle : undefined} onClick={() => { setPinMode("pattern"); setPin(""); }}>🔣 图案解锁</button></div></div>
+              {pinMode === "pin" ? <><div className="pin-row">{Array.from({ length: 4 }, (_, index) => <div key={index} className={`pin-box ${index < pin.length ? "filled" : ""} ${index === pin.length && pin.length < 4 ? "active" : ""}`} />)}</div><div className="numpad">{["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((key) => <button type="button" className="npk" key={key} onClick={() => enterPin(key)} disabled={pending}><div className="npk-num">{key}</div></button>)}<div /><button type="button" className="npk zero" onClick={() => enterPin("0")} disabled={pending}><div className="npk-num">0</div></button><button type="button" className="npk del" onClick={deletePin} disabled={pending}><div className="npk-num">⌫</div></button></div></> : <div className="pattern-wrap"><div className="pattern-grid live" onPointerDown={beginPattern} onPointerMove={movePattern} onPointerUp={finishPattern} onPointerCancel={finishPattern} onPointerLeave={finishPattern}>{patternPath.length > 1 ? <svg className="pattern-canvas" viewBox="0 0 240 240" aria-hidden="true"><polyline points={patternPath.map((node) => `${patternNodePoints[node - 1]?.x ?? 0},${patternNodePoints[node - 1]?.y ?? 0}`).join(" ")} /></svg> : null}{Array.from({ length: 9 }, (_, index) => <button type="button" ref={(element) => { patternNodeRefs.current[index] = element; }} className={`pat-node ${patternPath.includes(index + 1) ? "lit" : ""}`} key={index} aria-label={`图案点 ${index + 1}`} disabled={pending} />)}</div><div className="pattern-status">{pending ? "正在登录..." : patternStatus}</div></div>}
             </div>
           ) : null}
 

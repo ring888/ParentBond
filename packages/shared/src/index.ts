@@ -148,6 +148,31 @@ export interface GameSummary {
   updatedAt: string;
 }
 
+export interface MoodShare {
+  id: string;
+  familyName: string;
+  authorId: string;
+  authorName: string;
+  authorRole: UserRole;
+  authorAvatar: string;
+  mood: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface MoodShareSummary {
+  userId: string;
+  familyName: string;
+  items: MoodShare[];
+  updatedAt: string;
+}
+
+export interface CreateMoodShareInput {
+  userId: string;
+  mood: string;
+  content: string;
+}
+
 export interface ChildProfileSettings {
   pinMode: "pin" | "pattern";
   unlockAge: number;

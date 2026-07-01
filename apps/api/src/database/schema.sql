@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS auth_users (
   family_name VARCHAR(120) NOT NULL,
   role VARCHAR(16) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
+  pattern_hash VARCHAR(255) NULL,
   child_name VARCHAR(80) NULL,
   child_grade VARCHAR(24) NULL,
   child_avatar VARCHAR(32) NULL,

@@ -101,15 +101,8 @@ export const walletEntries = [
 
 export const memories = [
   {
-    week: "本周闪光",
-    text: "今天小明自己先把数学难题圈出来，说想等爸爸专注结束后一起研究。",
-    author: "爸爸",
-    locked: false,
-  },
-  {
-    week: "18 岁后见",
-    text: "孩子已写下 12 条给未来自己的小纸条。",
-    author: "小明",
-    locked: true,
+    mood: "😊",
+    text: "今天心情不错，想把这件小事分享给家人。",
+    author: "孩子",
   },
 ];

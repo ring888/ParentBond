@@ -16,6 +16,7 @@ import { AuthModule } from "./modules/auth/auth.module";
 import { FocusModule } from "./modules/focus/focus.module";
 import { GamesModule } from "./modules/games/games.module";
 import { HealthModule } from "./modules/health/health.module";
+import { MemoriesModule } from "./modules/memories/memories.module";
 import { ProfileModule } from "./modules/profile/profile.module";
 import { TasksModule } from "./modules/tasks/tasks.module";
 import { WalletModule } from "./modules/wallet/wallet.module";
@@ -56,6 +57,7 @@ import { WalletModule } from "./modules/wallet/wallet.module";
     AuthModule,
     FocusModule,
     GamesModule,
+    MemoriesModule,
     ProfileModule,
     TasksModule,
     WalletModule,
