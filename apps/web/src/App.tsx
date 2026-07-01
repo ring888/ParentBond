@@ -1804,8 +1804,9 @@ function ParentHomeView({
   const taskProgress = taskTotal > 0 ? Math.round((taskDone / taskTotal) * 100) : progress;
   const openTask = tasks.find((task) => !task.completedAt) ?? (taskTotal > 0 ? nextTask : null);
   const activeCompanionSession = companionFocus?.activeSession ?? null;
-  const hasLiveCompanion = Boolean(activeCompanionSession && activeCompanionSession.status === "active");
-  const childOnline = Boolean(companionFocus?.childOnline);
+  const childJoined = Boolean(child.joined);
+  const hasLiveCompanion = Boolean(childJoined && activeCompanionSession && activeCompanionSession.status === "active");
+  const childOnline = Boolean(childJoined && companionFocus?.childOnline);
   const childFocusing = Boolean(hasLiveCompanion && activeCompanionSession?.childRunning);
   const companionLiveLabel = hasLiveCompanion
     ? activeCompanionSession?.childRunning
@@ -1838,7 +1839,9 @@ function ParentHomeView({
       ? `${focusWeekStart.getMonth() + 1}月${focusWeekStart.getDate()}–${focusWeekEnd.getDate()}日`
       : "近 7 天";
   const taskStateLabel =
-    childFocusing
+    !childJoined
+      ? "待加入家庭"
+      : childFocusing
       ? activeCompanionSession?.mode === "task" && openTask
         ? `专注中 · ${subjectMeta[openTask.subject].label}`
         : "专注中"
@@ -1851,7 +1854,9 @@ function ParentHomeView({
             ? `进行中 · ${subjectMeta[openTask.subject].label}`
             : `待开始 · ${subjectMeta[openTask.subject].label}`
           : "今日同步";
-  const stateClass = childFocusing
+  const stateClass = !childJoined
+    ? "csp-offline"
+    : childFocusing
     ? "csp-focus"
     : taskTotal === 0
       ? "csp-offline"
@@ -1860,7 +1865,9 @@ function ParentHomeView({
         : taskDone > 0
           ? "csp-focus"
           : "csp-wait";
-  const mood = childFocusing
+  const mood = !childJoined
+    ? { icon: "···", label: "待加入", tone: "muted" }
+    : childFocusing
     ? { icon: "⏱️", label: "专注中", tone: "purple" }
     : taskTotal > 0 && taskDone === taskTotal
       ? { icon: "😊", label: "很棒", tone: "green" }
@@ -1873,9 +1880,11 @@ function ParentHomeView({
             : childOnline
               ? { icon: "🌙", label: "待计划", tone: "muted" }
               : { icon: "···", label: "未上线", tone: "muted" };
-  const childLiveLabel = childFocusing ? "正在专注" : childOnline ? "当前在线" : "等待上线";
+  const childLiveLabel = !childJoined ? "待加入" : childFocusing ? "正在专注" : childOnline ? "当前在线" : "等待上线";
   const footerHint =
-    taskTotal > 0 && taskDone === taskTotal
+    !childJoined
+      ? `等待${child.name}加入家庭后，这里会显示实时任务和专注状态。`
+      : taskTotal > 0 && taskDone === taskTotal
       ? `今天很认真，${child.name}已经完成了全部任务。`
       : openTask
         ? `${child.name}今天已经完成 ${taskDone} 项，下一项是「${openTask.title}」。`
@@ -2226,8 +2235,9 @@ function ParentChildDetailView({
   const taskTotal = tasks.length || stats.totalTasksToday;
   const taskDone = tasks.length ? completed : stats.completedTasksToday;
   const taskPercent = taskTotal > 0 ? Math.round((taskDone / taskTotal) * 100) : 0;
-  const isOnline = Boolean(companionFocus?.childOnline);
-  const activeSession = companionFocus?.activeSession?.status === "active" ? companionFocus.activeSession : null;
+  const childJoined = Boolean(child.joined);
+  const isOnline = Boolean(childJoined && companionFocus?.childOnline);
+  const activeSession = childJoined && companionFocus?.activeSession?.status === "active" ? companionFocus.activeSession : null;
   const isFocusing = Boolean(activeSession?.childRunning);
   const activeTaskTitle =
     activeSession?.taskTitle ||
@@ -2290,9 +2300,9 @@ function ParentChildDetailView({
           </div>
           <div className="pcd-hero-meta">
             <div className="pcd-hero-name">{child.name}</div>
-            <div className="pcd-hero-sub">{child.grade} · 10岁 · {isOnline ? "刚刚活跃" : "等待上线"}</div>
+            <div className="pcd-hero-sub">{child.grade} · 10岁 · {childJoined ? (isOnline ? "刚刚活跃" : "等待上线") : "待加入家庭"}</div>
             <div className="pcd-tags">
-              <span className={isOnline ? "pcd-pill green" : "pcd-pill muted"}><i />{isOnline ? "在线" : "离线"}</span>
+              <span className={isOnline ? "pcd-pill green" : "pcd-pill muted"}><i />{childJoined ? (isOnline ? "在线" : "离线") : "待加入"}</span>
               <span className={isFocusing ? "pcd-pill purple" : "pcd-pill muted"}>{isFocusing ? "专注中" : "未专注"}</span>
               <span className="pcd-pill gold">连续{Math.max(0, stats.streakDays)}天</span>
             </div>

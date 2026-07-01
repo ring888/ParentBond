@@ -94,9 +94,13 @@ export class FocusService implements OnModuleInit {
   async heartbeat(dto: CompanionFocusHeartbeatDto) {
     const context = await this.resolveFamilyContext(dto.userId);
     const now = new Date();
-    let activeSession = await this.findActiveCompanionSession(context.familyName);
+    let activeSession = await this.findActiveCompanionSession(context.familyName, context.childUserId);
 
     if (context.viewer.role === "child") {
+      if (!context.childUserId) {
+        return this.toCompanionState(context);
+      }
+
       if (dto.active === false) {
         if (activeSession?.status === "active") {
           activeSession.status = "ended";
@@ -205,7 +209,7 @@ export class FocusService implements OnModuleInit {
       viewer,
       members,
       familyName: viewer.familyName,
-      childUserId: child?.id ?? parent?.id ?? viewer.id,
+      childUserId: child?.id ?? null,
       child,
       parent,
     };
@@ -213,19 +217,20 @@ export class FocusService implements OnModuleInit {
 
   private async toCompanionState(context: Awaited<ReturnType<FocusService["resolveFamilyContext"]>>) {
     const serverNow = new Date();
-    const activeSession = await this.findActiveCompanionSession(context.familyName);
+    const activeSession = await this.findActiveCompanionSession(context.familyName, context.childUserId);
     const parentPresence = await this.userPresence(context.parent?.id ?? activeSession?.parentUserId ?? null);
     const childPresence = await this.userPresence(context.childUserId);
-    const sessionChildOnline = this.isRecent(activeSession?.lastChildSeenAt ?? null);
+    const hasChild = Boolean(context.childUserId);
+    const sessionChildOnline = hasChild && this.isRecent(activeSession?.lastChildSeenAt ?? null);
 
     return {
       familyName: context.familyName,
       childUserId: context.childUserId,
       parentUserId: context.parent?.id ?? activeSession?.parentUserId ?? null,
       parentName: context.parent?.displayName ?? null,
-      childOnline: childPresence.online || sessionChildOnline,
+      childOnline: hasChild && (childPresence.online || sessionChildOnline),
       parentOnline: parentPresence.online,
-      childLastSeenAt: (activeSession?.lastChildSeenAt ?? childPresence.lastSeenAt)?.toISOString() ?? null,
+      childLastSeenAt: hasChild ? (activeSession?.lastChildSeenAt ?? childPresence.lastSeenAt)?.toISOString() ?? null : null,
       parentLastSeenAt: (activeSession?.lastParentSeenAt ?? parentPresence.lastSeenAt)?.toISOString() ?? null,
       activeSession: activeSession ? this.toSessionPayload(activeSession, serverNow) : null,
       serverNow: serverNow.toISOString(),
@@ -233,11 +238,14 @@ export class FocusService implements OnModuleInit {
     };
   }
 
-  private async findActiveCompanionSession(familyName: string) {
+  private async findActiveCompanionSession(familyName: string, childUserId?: string | null) {
+    if (!childUserId) return null;
+
     const staleCutoff = new Date(Date.now() - 12 * 60 * 60 * 1000);
     return this.companionSessions
       .createQueryBuilder("session")
       .where("session.familyName = :familyName", { familyName })
+      .andWhere("session.childUserId = :childUserId", { childUserId })
       .andWhere("session.status = :status", { status: "active" })
       .andWhere("session.updatedAt >= :staleCutoff", { staleCutoff })
       .orderBy("session.updatedAt", "DESC")

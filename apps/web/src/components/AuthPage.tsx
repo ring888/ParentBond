@@ -312,6 +312,8 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
   };
 
   const loginChildWithPin = async (pinValue: string) => {
+    if (pending) return;
+
     if (!savedChild) {
       setPin("");
       setToast("先用邀请码加入家庭");
@@ -331,6 +333,8 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
   };
 
   const enterPin = (key: string) => {
+    if (pending) return;
+
     const next = `${pin}${key}`.slice(0, 4);
     setPin(next);
     if (next.length === 4) {
