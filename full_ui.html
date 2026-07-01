@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg0:#060C18;--bg1:#0D1B3E;--bg2:#112048;--bg3:#1A2E60;
+  --gold:#F5C842;--gold2:#FFE085;--gold3:#B8920A;
+  --green:#3DD68C;--green2:#6EEDB0;--green3:#0A7A4A;
+  --purple:#A78BFA;--purple2:#C4B5FD;--purple3:#5B21B6;
+  --coral:#FF7B6B;--coral2:#FFA598;
+  --blue:#60A5FA;--blue2:#93C5FD;
+  --text0:#F0EBE3;--text1:#B8B2A8;--text2:#6E6860;--text3:#3A3630;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --card:rgba(255,255,255,0.04);
+}
+body{font-family:'Inter',-apple-system,sans-serif;background:#040810;display:flex;justify-content:center;align-items:flex-start;min-height:100vh;padding:20px 12px 40px;overflow-x:hidden}
+
+/* ── SHELL ── */
+.shell{width:393px;min-height:852px;background:var(--bg1);border-radius:50px;position:relative;overflow:hidden;
+  box-shadow:0 0 0 1px rgba(255,255,255,0.09),0 50px 140px rgba(0,0,0,0.95),0 0 60px rgba(167,139,250,0.05),inset 0 1px 0 rgba(255,255,255,0.07)}
+canvas.sf{position:absolute;inset:0;pointer-events:none;z-index:0}
+
+/* orbs */
+.orb{position:absolute;border-radius:50%;filter:blur(70px);pointer-events:none;z-index:0}
+.o1{width:240px;height:240px;background:radial-gradient(circle,rgba(245,200,66,.1) 0%,transparent 70%);top:-80px;right:-60px}
+.o2{width:300px;height:300px;background:radial-gradient(circle,rgba(167,139,250,.08) 0%,transparent 70%);top:280px;left:-100px}
+.o3{width:220px;height:220px;background:radial-gradient(circle,rgba(61,214,140,.07) 0%,transparent 70%);top:700px;right:-70px}
+
+/* ── NOTCH ── */
+.notch{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:126px;height:36px;background:#030710;border-radius:20px;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 10px}
+.n-cam{width:12px;height:12px;background:#0A0F20;border-radius:50%;border:2px solid #111}
+.n-pill{width:56px;height:6px;background:#0A0F20;border-radius:3px}
+
+/* ── STATUS ── */
+.sbar{position:relative;z-index:20;display:flex;justify-content:space-between;align-items:center;padding:14px 26px 0;margin-top:52px}
+.sbar-t{font-size:16px;font-weight:700;color:var(--text0);letter-spacing:-.4px}
+.sbar-r{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text0)}
+
+/* ── SCROLL AREA ── */
+.scroll{position:relative;z-index:10;padding:0 18px 110px;overflow-y:auto;max-height:760px}
+.scroll::-webkit-scrollbar{display:none}
+
+/* ── NAV TABS ── */
+.nav-tabs{display:flex;gap:6px;margin:16px 0 18px;overflow-x:auto;padding-bottom:2px}
+.nav-tabs::-webkit-scrollbar{display:none}
+.ntab{flex-shrink:0;padding:7px 15px;border-radius:99px;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;border:1px solid transparent}
+.ntab.on{background:rgba(245,200,66,.15);border-color:rgba(245,200,66,.3);color:var(--gold);font-weight:700}
+.ntab:not(.on){background:rgba(255,255,255,.04);border-color:var(--border);color:var(--text2)}
+
+/* ── BOTTOM NAV ── */
+.bnav{position:absolute;bottom:0;left:0;right:0;height:88px;background:rgba(6,12,24,.96);backdrop-filter:blur(24px);border-top:1px solid rgba(255,255,255,.06);display:flex;align-items:flex-start;padding-top:10px;z-index:100}
+.bni{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 0;position:relative}
+.bni-icon{font-size:22px;line-height:1;transition:transform .2s}
+.bni-lbl{font-size:9px;font-weight:500;color:var(--text2);transition:color .2s}
+.bni.on .bni-icon{transform:translateY(-2px)}
+.bni.on .bni-lbl{color:var(--gold);font-weight:700}
+.bni-dot{position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:4px;height:4px;background:var(--gold);border-radius:50%;box-shadow:0 0 7px var(--gold)}
+.fab{width:54px;height:54px;background:linear-gradient(135deg,var(--gold),#D4A500);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 4px 18px rgba(245,200,66,.45);margin-top:-10px;cursor:pointer;transition:all .2s}
+.fab:hover{transform:scale(1.06) translateY(-2px);box-shadow:0 8px 26px rgba(245,200,66,.55)}
+
+/* ── REUSABLE ── */
+.sec-row{display:flex;justify-content:space-between;align-items:center;margin:20px 0 11px}
+.sec-t{font-size:16px;font-weight:700;color:var(--text0);letter-spacing:-.3px}
+.sec-m{font-size:12px;color:var(--purple);font-weight:500;cursor:pointer}
+.card{background:var(--card);border:1px solid var(--border);border-radius:20px;transition:all .2s}
+.card:hover{border-color:var(--border2)}
+
+/* ── PAGE VIEWS ── */
+.pv{display:none}.pv.on{display:block}
+
+/* pulse anim */
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.65)}}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(200%)}}
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popIn{0%{transform:scale(.8);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+@keyframes glow{0%,100%{opacity:.6}50%{opacity:1}}
+
+/* ═══════════════════════════ HOME PAGE ═══════════════════════════ */
+.hero-card{background:linear-gradient(135deg,#152E68 0%,#0E1F4A 60%,#162A5C 100%);border-radius:26px;padding:22px;margin-bottom:14px;border:1px solid rgba(255,255,255,.09);position:relative;overflow:hidden;cursor:pointer;transition:transform .2s}
+.hero-card:hover{transform:translateY(-2px)}
+.hero-card::before{content:'';position:absolute;top:-50px;right:-50px;width:180px;height:180px;background:radial-gradient(circle,rgba(245,200,66,.18) 0%,transparent 65%);border-radius:50%;pointer-events:none}
+.hero-eyebrow{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:7px}
+.hero-eyebrow::before{content:'';width:4px;height:4px;background:var(--gold);border-radius:50%}
+.hero-h{font-size:22px;font-weight:800;color:var(--text0);letter-spacing:-.6px;line-height:1.2;margin-bottom:18px}
+.hero-h em{color:var(--gold2);font-style:normal}
+.prog-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.prog-lbl{font-size:12px;color:var(--text1);font-weight:500}
+.prog-val{font-size:12px;font-weight:700;color:var(--green)}
+.ptrack{height:7px;background:rgba(255,255,255,.09);border-radius:99px;overflow:hidden;margin-bottom:14px}
+.pfill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--green),var(--green2));box-shadow:0 0 10px rgba(61,214,140,.5);transition:width .8s cubic-bezier(.4,0,.2,1)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.09);border-radius:99px;padding:5px 11px;font-size:11px;color:var(--text1);font-weight:500}
+.chipdot{width:6px;height:6px;border-radius:50%}
+
+/* dad card */
+.dad-card{background:rgba(61,214,140,.06);border:1px solid rgba(61,214,140,.14);border-radius:20px;padding:16px;display:flex;align-items:center;gap:14px;cursor:pointer;margin-bottom:14px;transition:all .2s}
+.dad-card:hover{background:rgba(61,214,140,.09)}
+.dad-av{width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#1A4E35,#0D2E1E);display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 0 0 2px rgba(61,214,140,.3);flex-shrink:0}
+.dad-info{flex:1}
+.dad-name{font-size:14px;font-weight:600;color:var(--text0);margin-bottom:3px}
+.dad-sub{font-size:11px;color:var(--text2)}
+.live-pill{display:flex;align-items:center;gap:5px;background:rgba(61,214,140,.15);border:1px solid rgba(61,214,140,.25);border-radius:99px;padding:5px 10px;flex-shrink:0}
+.live-dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 1.8s ease-in-out infinite}
+.live-txt{font-size:11px;font-weight:600;color:var(--green)}
+
+/* streak */
+.streak-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.streak-cell{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;text-align:center}
+.sc-val{font-size:22px;font-weight:800;letter-spacing:-.5px;margin-bottom:2px}
+.sc-lbl{font-size:10px;color:var(--text2)}
+
+/* ═══════════════════════════ TASKS PAGE (unified) ═══════════════════════════ */
+/* voice bar */
+.voice-bar{background:linear-gradient(135deg,#1C0F50,#2A1875);border-radius:20px;padding:16px 18px;margin-bottom:12px;border:1px solid rgba(167,139,250,.22);display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .2s}
+.voice-bar:hover{border-color:rgba(167,139,250,.38)}
+.mic-wrap{width:44px;height:44px;background:rgba(167,139,250,.2);border:1px solid rgba(167,139,250,.3);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;transition:all .3s}
+.voice-title{font-size:14px;font-weight:600;color:var(--text0);margin-bottom:2px}
+.voice-sub{font-size:11px;color:var(--text2)}
+
+/* active focus banner — shown when a task is being focused */
+.focus-banner{background:linear-gradient(135deg,#1C0A48,#280E68);border:1px solid rgba(167,139,250,.3);border-radius:20px;padding:16px 18px;margin-bottom:12px;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden;animation:fadeSlideUp .35s ease}
+.focus-banner::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(167,139,250,.04),transparent);animation:shimmer 3s linear infinite}
+.fb-ring{position:relative;width:52px;height:52px;flex-shrink:0}
+.fb-ring svg{transform:rotate(-90deg)}
+.fb-ring-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--text0)}
+.fb-info{flex:1;min-width:0}
+.fb-task{font-size:13px;font-weight:700;color:var(--text0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+.fb-timer{font-size:22px;font-weight:300;color:var(--purple2);letter-spacing:-1px;line-height:1}
+.fb-actions{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.fb-done{background:rgba(61,214,140,.2);border:1px solid rgba(61,214,140,.3);border-radius:10px;padding:6px 12px;font-size:11px;font-weight:600;color:var(--green);cursor:pointer;white-space:nowrap}
+.fb-pause{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:6px 12px;font-size:11px;color:var(--text1);cursor:pointer;white-space:nowrap}
+
+/* progress summary */
+.task-progress-bar{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:12px}
+.tp-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+.tp-t{font-size:13px;font-weight:600;color:var(--text0)}
+.tp-v{font-size:13px;font-weight:700;color:var(--green)}
+
+/* task items */
+.ti{display:flex;align-items:center;gap:11px;padding:13px 15px;background:var(--card);border:1px solid var(--border);border-radius:17px;margin-bottom:7px;cursor:pointer;transition:all .25s;position:relative;overflow:hidden}
+.ti:hover{border-color:var(--border2);background:rgba(255,255,255,.06)}
+.ti.active-task{border-color:rgba(167,139,250,.4);background:rgba(167,139,250,.07)}
+.ti.done-task{opacity:.45}
+.ti.done-task .ti-name{text-decoration:line-through;color:var(--text2)}
+/* active glow line */
+.ti.active-task::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--purple),var(--purple3));border-radius:99px 0 0 99px}
+/* shimmer on active */
+.ti.active-task::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(167,139,250,.06),transparent);animation:shimmer 2.5s linear infinite}
+.ti-subj{font-size:10px;font-weight:700;letter-spacing:.06em;padding:4px 8px;border-radius:8px;flex-shrink:0;text-transform:uppercase}
+.s-math{background:rgba(167,139,250,.18);color:var(--purple2);border:1px solid rgba(167,139,250,.22)}
+.s-cn{background:rgba(245,200,66,.14);color:#FFD060;border:1px solid rgba(245,200,66,.2)}
+.s-en{background:rgba(61,214,140,.14);color:var(--green2);border:1px solid rgba(61,214,140,.2)}
+.s-oth{background:rgba(96,165,250,.14);color:var(--blue2);border:1px solid rgba(96,165,250,.2)}
+.ti-body{flex:1;min-width:0}
+.ti-name{font-size:14px;font-weight:500;color:var(--text0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.ti-meta{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px}
+/* start focus mini btn */
+.ti-focus-btn{display:flex;align-items:center;gap:5px;background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.22);border-radius:99px;padding:5px 10px;font-size:11px;font-weight:600;color:var(--purple2);cursor:pointer;flex-shrink:0;transition:all .2s;white-space:nowrap}
+.ti-focus-btn:hover{background:rgba(167,139,250,.25)}
+.ti-focus-btn.paused{background:rgba(245,200,66,.15);border-color:rgba(245,200,66,.25);color:var(--gold)}
+/* slider */
+.sl-wrap{width:50px;height:28px;flex-shrink:0}
+.sl-track{width:50px;height:28px;border-radius:14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);cursor:pointer;position:relative;transition:all .25s}
+.sl-track.on{background:rgba(61,214,140,.28);border-color:rgba(61,214,140,.45);box-shadow:0 0 10px rgba(61,214,140,.22)}
+.sl-thumb{width:22px;height:22px;background:#fff;border-radius:50%;position:absolute;top:2px;left:3px;transition:transform .25s cubic-bezier(.34,1.56,.64,1);box-shadow:0 2px 6px rgba(0,0,0,.3);pointer-events:none}
+.sl-track.on .sl-thumb{transform:translateX(22px);background:var(--green)}
+
+/* ═══════════════════════════ FOCUS PAGE ═══════════════════════════ */
+.focus-hero{background:linear-gradient(160deg,#130840 0%,#1E1060 50%,#0E0630 100%);border-radius:26px;padding:26px 22px;margin-bottom:14px;border:1px solid rgba(167,139,250,.2);position:relative;overflow:hidden;transition:transform .2s}
+.focus-hero:hover{transform:translateY(-1px)}
+.fh-glow{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:280px;height:280px;background:radial-gradient(circle,rgba(167,139,250,.14) 0%,transparent 65%);border-radius:50%;pointer-events:none}
+.fh-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
+.fh-lbl{font-size:11px;font-weight:700;color:var(--purple);letter-spacing:.12em;text-transform:uppercase}
+.status-pill{display:flex;align-items:center;gap:5px;border-radius:99px;padding:5px 11px;font-size:11px;font-weight:600}
+.sp-running{background:rgba(61,214,140,.15);border:1px solid rgba(61,214,140,.25);color:var(--green)}
+.sp-paused{background:rgba(245,200,66,.15);border:1px solid rgba(245,200,66,.25);color:var(--gold)}
+.sp-idle{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--text2)}
+/* current task chip in focus */
+.fh-task-chip{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.2);border-radius:12px;padding:8px 12px;margin-bottom:20px;font-size:12px;color:var(--purple2);display:flex;align-items:center;gap:7px}
+.fh-task-chip .dot{width:6px;height:6px;background:var(--purple);border-radius:50%}
+/* big ring */
+.big-ring-wrap{position:relative;width:180px;height:180px;margin:0 auto 20px}
+.big-ring-wrap svg{transform:rotate(-90deg)}
+.big-ring-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.big-time{font-size:46px;font-weight:200;color:var(--text0);letter-spacing:-2px;line-height:1;font-variant-numeric:tabular-nums}
+.big-colon{animation:pulse 1s step-end infinite}
+.big-sub{font-size:11px;color:var(--text2);margin-top:4px;letter-spacing:.05em}
+/* tomato dots */
+.tomato-row{display:flex;justify-content:center;gap:8px;margin-bottom:20px}
+.tom{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.12)}
+.tom.done{background:var(--purple);border-color:var(--purple3);box-shadow:0 0 8px rgba(167,139,250,.5)}
+.tom.active{background:var(--gold);border-color:var(--gold3);box-shadow:0 0 8px rgba(245,200,66,.5);animation:glow 1.5s ease-in-out infinite}
+/* action btns */
+.fh-btns{display:flex;gap:9px}
+.fb-p{flex:1;padding:13px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:15px;text-align:center;font-size:14px;font-weight:600;color:var(--text1);cursor:pointer;transition:all .2s}
+.fb-p:hover{background:rgba(255,255,255,.11)}
+.fb-primary{flex:2;padding:13px;background:linear-gradient(135deg,var(--purple),#7C3AED);border:none;border-radius:15px;text-align:center;font-size:14px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 4px 18px rgba(124,58,237,.4);transition:all .2s}
+.fb-primary:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(124,58,237,.5)}
+
+/* dad sync */
+.sync-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:16px;margin-bottom:12px}
+.sync-head{font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.09em;text-transform:uppercase;margin-bottom:12px}
+.sync-players{display:flex;gap:10px;align-items:stretch}
+.sync-p{flex:1;text-align:center;padding:14px 10px;border-radius:16px;border:1px solid}
+.sp-me{background:rgba(167,139,250,.07);border-color:rgba(167,139,250,.15)}
+.sp-dad{background:rgba(61,214,140,.07);border-color:rgba(61,214,140,.15)}
+.sp-av{font-size:26px;margin-bottom:6px}
+.sp-name{font-size:12px;font-weight:700;color:var(--text0);margin-bottom:4px}
+.sp-status{font-size:11px;display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:8px}
+.sp-time{font-size:20px;font-weight:700;color:var(--text0);letter-spacing:-1px}
+.sync-vs{display:flex;align-items:center;font-size:18px;color:var(--text3)}
+.sync-prize{margin-top:10px;padding:10px 12px;background:rgba(245,200,66,.07);border:1px solid rgba(245,200,66,.14);border-radius:12px;font-size:12px;color:var(--gold);text-align:center}
+
+/* week chart */
+.week-chart{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:16px;margin-bottom:12px}
+.wc-head{display:flex;justify-content:space-between;margin-bottom:14px}
+.wc-title{font-size:14px;font-weight:600;color:var(--text0)}
+.wc-val{font-size:14px;font-weight:700;color:var(--purple)}
+.wc-bars{display:flex;align-items:flex-end;gap:6px;height:60px}
+.wc-day{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.wc-bar-wrap{flex:1;width:100%;display:flex;align-items:flex-end}
+.wc-bar{width:100%;border-radius:6px 6px 0 0;transition:height .4s ease;min-height:4px}
+.wc-dlbl{font-size:9px;color:var(--text2);font-weight:500}
+
+/* ═══════════════════════════ GAMES PAGE ═══════════════════════════ */
+.hint-bar{background:rgba(61,214,140,.07);border:1px solid rgba(61,214,140,.14);border-radius:14px;padding:11px 14px;margin-bottom:14px;font-size:12px;color:var(--text1);line-height:1.5}
+.hint-bar strong{color:var(--green)}
+/* game cards horizontal scroll */
+.g-scroll{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px}
+.g-scroll::-webkit-scrollbar{display:none}
+.gc{flex-shrink:0;width:155px;border-radius:22px;padding:18px 16px;border:1px solid rgba(255,255,255,.07);cursor:pointer;position:relative;overflow:hidden;transition:transform .2s}
+.gc:hover{transform:scale(.97)}
+.gc1{background:linear-gradient(145deg,#0E1E40,#182E60)}
+.gc2{background:linear-gradient(145deg,#1A0F48,#2D1878)}
+.gc3{background:linear-gradient(145deg,#0E2C1C,#1A4830)}
+.gc4{background:linear-gradient(145deg,#2C1205,#481E0A)}
+.gc-glow{position:absolute;bottom:-20px;right:-20px;width:75px;height:75px;border-radius:50%;filter:blur(22px);pointer-events:none}
+.gc1 .gc-glow{background:rgba(96,165,250,.5)}
+.gc2 .gc-glow{background:rgba(167,139,250,.5)}
+.gc3 .gc-glow{background:rgba(61,214,140,.5)}
+.gc4 .gc-glow{background:rgba(255,123,107,.5)}
+.gc-icon{font-size:34px;margin-bottom:10px}
+.gc-name{font-size:13px;font-weight:700;color:var(--text0);margin-bottom:3px;letter-spacing:-.2px}
+.gc-tag{font-size:10px;color:rgba(255,255,255,.4);margin-bottom:10px;line-height:1.4}
+.gc-best{background:rgba(255,255,255,.08);border-radius:8px;padding:4px 8px;font-size:10px;font-weight:600;color:var(--gold)}
+/* schulte inline demo */
+.schulte-wrap{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:18px;margin-bottom:12px}
+.s-head-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.s-head-title{font-size:13px;font-weight:700;color:var(--text0)}
+.s-head-title .s-size-tag{color:var(--gold);font-weight:700}
+/* difficulty selector */
+.s-diff-label{font-size:10.5px;color:var(--text2);font-weight:600;margin-bottom:8px;letter-spacing:.04em}
+.s-diff-row{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px}
+.s-diff-row::-webkit-scrollbar{display:none}
+.sdtab{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 13px 6px;border-radius:13px;font-size:12px;font-weight:700;cursor:pointer;transition:all .18s;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text2);min-width:46px}
+.sdtab .sdtab-n{font-size:13px;font-weight:800;letter-spacing:-.2px}
+.sdtab .sdtab-l{font-size:8.5px;font-weight:600;color:inherit;opacity:.75}
+.sdtab:hover{border-color:var(--border2);background:rgba(255,255,255,.07)}
+.sdtab.on{background:rgba(245,200,66,.16);border-color:rgba(245,200,66,.35);color:var(--gold)}
+.sdtab.on .sdtab-l{color:var(--gold2);opacity:.9}
+.sdtab.locked{opacity:.4;cursor:not-allowed}
+.sdtab.locked:hover{border-color:var(--border);background:rgba(255,255,255,.04)}
+.sdtab-lockicon{font-size:9px}
+.s-hud{display:flex;justify-content:space-around;margin-bottom:12px}
+.s-hud-item{text-align:center}
+.s-hud-v{font-size:22px;font-weight:700;color:var(--text0);letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.s-hud-l{font-size:10px;color:var(--text2);margin-top:1px}
+.s-target{text-align:center;font-size:12px;color:var(--green);font-weight:500;margin-bottom:10px}
+.s-grid{display:grid;grid-template-columns:repeat(var(--sgrid-n,5),1fr);gap:var(--sgrid-gap,4px)}
+.sc{aspect-ratio:1;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:var(--sgrid-fs,16px);font-weight:600;color:var(--text0);cursor:pointer;transition:all .15s;user-select:none}
+.sc:hover{background:rgba(255,255,255,.09);border-color:var(--border2)}
+.sc.found{background:rgba(61,214,140,.2);border-color:rgba(61,214,140,.4);color:var(--green2);transform:scale(.93);box-shadow:0 0 8px rgba(61,214,140,.3)}
+.sc.wrong{background:rgba(255,123,107,.2);border-color:rgba(255,123,107,.4);animation:shake .3s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.s-start{display:block;width:100%;padding:12px;background:linear-gradient(135deg,var(--green3),#0F5C38);border:none;border-radius:13px;font-size:14px;font-weight:700;color:#fff;cursor:pointer;margin-top:12px;transition:all .2s;box-shadow:0 4px 14px rgba(10,122,74,.4)}
+.s-start:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(10,122,74,.5)}
+.s-best-row{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:10px;font-size:11px;color:var(--text2)}
+.s-best-row b{color:var(--gold);font-weight:700}
+
+/* ── game card active state (selected game) ── */
+.gc{position:relative}
+.gc::after{content:'';position:absolute;inset:0;border-radius:22px;border:2px solid transparent;transition:border-color .2s,box-shadow .2s;pointer-events:none}
+.gc.active::after{border-color:rgba(245,200,66,.55);box-shadow:0 0 0 3px rgba(245,200,66,.12),0 8px 22px rgba(0,0,0,.35)}
+.gc.active{transform:translateY(-1px)}
+.gc-check{position:absolute;top:10px;right:10px;width:18px;height:18px;border-radius:50%;background:var(--gold);color:#1A1300;font-size:10px;font-weight:800;display:none;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(245,200,66,.5);z-index:2}
+.gc.active .gc-check{display:flex}
+
+/* ── shared game-panel shell (Stroop / N-back / Reaction reuse Schulte's box) ── */
+.game-panel{display:none}
+.game-panel.on{display:block}
+
+/* ═══════════════════════════ STROOP GAME ═══════════════════════════ */
+.stroop-stage{background:radial-gradient(circle at 50% 35%,rgba(167,139,250,.07),transparent 70%);border:1px solid rgba(167,139,250,.16);border-radius:18px;padding:30px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:center;min-height:108px;position:relative;overflow:hidden}
+.stroop-word{font-size:38px;font-weight:800;letter-spacing:-.5px;transition:opacity .15s;animation:popIn .25s ease}
+.stroop-idle{font-size:13px;color:var(--text2);text-align:center;line-height:1.6}
+.stroop-swatches{display:flex;gap:8px;justify-content:center;margin-bottom:4px;flex-wrap:wrap}
+.swatch{width:46px;height:46px;border-radius:50%;border:2px solid rgba(255,255,255,.12);cursor:pointer;transition:all .15s;position:relative;flex-shrink:0;box-shadow:inset 0 2px 4px rgba(255,255,255,.18),0 3px 8px rgba(0,0,0,.3)}
+.swatch:hover{transform:scale(1.08)}
+.swatch:active{transform:scale(.94)}
+.swatch.correct{transform:scale(1.14);box-shadow:0 0 0 4px rgba(61,214,140,.35),0 4px 14px rgba(61,214,140,.4)}
+.swatch.wrong{animation:shake .3s}
+.swatch.disabled{cursor:default;opacity:.45}
+.swatch-check{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5);opacity:0;transition:opacity .15s}
+.swatch.correct .swatch-check{opacity:1}
+
+/* ═══════════════════════════ N-BACK GAME ═══════════════════════════ */
+.nback-trail{display:flex;gap:6px;justify-content:center;margin-bottom:14px;min-height:26px;align-items:center}
+.nback-trail-item{width:22px;height:22px;border-radius:7px;background:rgba(255,255,255,.05);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;opacity:.45;transition:all .2s}
+.nback-trail-item.cur{opacity:1;transform:scale(1.15);background:rgba(61,214,140,.14);border-color:rgba(61,214,140,.3)}
+.nback-stage{background:radial-gradient(circle at 50% 35%,rgba(61,214,140,.07),transparent 70%);border:1px solid rgba(61,214,140,.16);border-radius:18px;padding:22px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:center;min-height:108px;position:relative}
+.nback-shape{font-size:50px;animation:popIn .3s ease;line-height:1}
+.nback-idle{font-size:13px;color:var(--text2);text-align:center;line-height:1.6}
+.nback-actions{display:flex;gap:10px;margin-bottom:4px}
+.nback-btn{flex:1;padding:13px;border-radius:14px;border:1.5px solid;font-size:14px;font-weight:700;cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center;gap:6px}
+.nback-btn.match{background:rgba(61,214,140,.14);border-color:rgba(61,214,140,.32);color:var(--green2)}
+.nback-btn.match:hover{background:rgba(61,214,140,.22)}
+.nback-btn.nomatch{background:rgba(255,123,107,.12);border-color:rgba(255,123,107,.3);color:var(--coral2)}
+.nback-btn.nomatch:hover{background:rgba(255,123,107,.2)}
+.nback-btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important}
+.nback-btn.correct{transform:scale(1.04);box-shadow:0 0 0 3px rgba(61,214,140,.3)}
+.nback-btn.wrong{animation:shake .3s}
+.nback-memlabel{position:absolute;top:8px;left:0;right:0;text-align:center;font-size:9.5px;font-weight:700;color:var(--green2);letter-spacing:.08em;text-transform:uppercase;opacity:.85}
+
+/* ═══════════════════════════ REACTION GAME ═══════════════════════════ */
+.reaction-zone{height:172px;border-radius:24px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;cursor:pointer;margin-bottom:16px;transition:background .12s,box-shadow .12s,transform .12s;border:1.5px solid var(--border);user-select:none;position:relative;overflow:hidden}
+.reaction-zone.waiting{background:rgba(255,255,255,.04)}
+.reaction-zone.go{background:linear-gradient(150deg,#0F5C38,#16864F);border-color:rgba(61,214,140,.5);box-shadow:0 0 0 4px rgba(61,214,140,.18),0 8px 26px rgba(61,214,140,.3)}
+.reaction-zone.nogo{background:linear-gradient(150deg,#5C1410,#8A1F17);border-color:rgba(255,123,107,.5);box-shadow:0 0 0 4px rgba(255,123,107,.16),0 8px 26px rgba(255,107,107,.25)}
+.reaction-zone.flash-correct{animation:rcPulseGood .35s ease}
+.reaction-zone.flash-wrong{animation:rcPulseBad .35s ease}
+.reaction-zone:active{transform:scale(.98)}
+@keyframes rcPulseGood{0%{box-shadow:0 0 0 0 rgba(61,214,140,.6)}100%{box-shadow:0 0 0 14px rgba(61,214,140,0)}}
+@keyframes rcPulseBad{0%{box-shadow:0 0 0 0 rgba(255,107,107,.6)}100%{box-shadow:0 0 0 14px rgba(255,107,107,0)}}
+.rc-zone-icon{font-size:34px;line-height:1}
+.rc-zone-txt{font-size:14px;font-weight:700;color:var(--text0);letter-spacing:.02em}
+.rc-zone-sub{font-size:10.5px;color:var(--text2)}
+.reaction-zone.go .rc-zone-txt{color:#fff}
+.reaction-zone.nogo .rc-zone-txt{color:#fff}
+/* leaderboard */
+.lb-row{display:flex;align-items:center;gap:11px;padding:11px 14px;background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:7px}
+.lb-rank{font-size:16px;width:28px;text-align:center;flex-shrink:0}
+.lb-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.lb-info{flex:1}
+.lb-name{font-size:13px;font-weight:600;color:var(--text0)}
+.lb-game{font-size:11px;color:var(--text2);margin-top:1px}
+.lb-score{font-size:15px;font-weight:700}
+
+/* ═══════════════════════════ WALLET PAGE ═══════════════════════════ */
+.wallet-hero{background:linear-gradient(135deg,#1E1400,#2E2000,#1A1200);border-radius:26px;padding:22px;margin-bottom:14px;border:1px solid rgba(245,200,66,.14);position:relative;overflow:hidden;transition:transform .2s}
+.wallet-hero:hover{transform:translateY(-2px)}
+.wh-glow{position:absolute;top:-30px;right:-30px;width:150px;height:150px;background:radial-gradient(circle,rgba(245,200,66,.2) 0%,transparent 65%);border-radius:50%;pointer-events:none}
+.wh-label{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+.wh-balance{font-size:48px;font-weight:800;color:var(--text0);letter-spacing:-2.5px;line-height:1;margin-bottom:4px}
+.wh-balance sup{font-size:20px;vertical-align:top;margin-top:8px;color:var(--gold)}
+.wh-balance .cents{font-size:24px;color:var(--text1);font-weight:400}
+.wh-sub{font-size:12px;color:var(--text2);margin-bottom:18px}
+.wh-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.whs{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:10px;text-align:center}
+.whs-v{font-size:15px;font-weight:700;margin-bottom:2px}
+.whs-l{font-size:10px;color:var(--text2)}
+/* pending award */
+.pending-card{background:linear-gradient(135deg,rgba(245,200,66,.12),rgba(245,200,66,.05));border:1px solid rgba(245,200,66,.28);border-radius:20px;padding:18px;margin-bottom:12px;cursor:pointer;transition:all .2s}
+.pending-card:hover{border-color:rgba(245,200,66,.42)}
+.pending-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.p-blink{width:8px;height:8px;background:var(--gold);border-radius:50%;animation:pulse 1.4s ease-in-out infinite}
+.p-label{font-size:13px;font-weight:600;color:var(--gold)}
+.p-reason{font-size:15px;font-weight:600;color:var(--text0);margin-bottom:8px}
+.p-footer{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px}
+.p-by{font-size:12px;color:var(--text2)}
+.p-amt{font-size:28px;font-weight:800;color:var(--green);letter-spacing:-1px}
+.p-btns{display:flex;gap:8px}
+.p-agree{flex:1;padding:11px;background:rgba(61,214,140,.2);border:1px solid rgba(61,214,140,.3);border-radius:13px;text-align:center;font-size:13px;font-weight:700;color:var(--green);cursor:pointer;transition:all .2s}
+.p-agree:hover{background:rgba(61,214,140,.3)}
+.p-evid{padding:11px 14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:13px;font-size:13px;color:var(--text1);cursor:pointer}
+/* ledger */
+.ledger-item{display:flex;align-items:center;gap:11px;padding:13px 14px;background:var(--card);border:1px solid var(--border);border-radius:16px;margin-bottom:7px;cursor:pointer;transition:background .15s}
+.ledger-item:hover{background:rgba(255,255,255,.06)}
+.li-icon{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.li-plus{background:rgba(61,214,140,.14);border:1px solid rgba(61,214,140,.2)}
+.li-minus{background:rgba(255,123,107,.14);border:1px solid rgba(255,123,107,.2)}
+.li-info{flex:1;min-width:0}
+.li-reason{font-size:13px;font-weight:500;color:var(--text0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li-meta{font-size:11px;color:var(--text2);margin-top:2px;display:flex;align-items:center;gap:6px}
+.li-evid-tag{background:rgba(255,255,255,.07);border-radius:99px;padding:2px 7px;font-size:10px;color:var(--text2)}
+.li-consent{background:rgba(61,214,140,.12);border-radius:99px;padding:2px 7px;font-size:10px;color:var(--green)}
+.li-amt{font-size:16px;font-weight:700;flex-shrink:0}
+.amt-p{color:var(--green)}
+.amt-m{color:var(--coral)}
+/* month chart */
+.month-mini{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:16px;margin-bottom:12px}
+.mm-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.mm-title{font-size:14px;font-weight:600;color:var(--text0)}
+.mm-tag{font-size:11px;color:var(--text2)}
+.mm-bars{display:flex;align-items:flex-end;gap:5px;height:50px}
+.mm-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%}
+.mm-bar{width:100%;border-radius:5px 5px 0 0;min-height:3px;transition:height .4s ease}
+.mm-lbl{font-size:9px;color:var(--text2)}
+
+/* ═══════════════════════════ MEMORY PAGE ═══════════════════════════ */
+.write-card{background:linear-gradient(135deg,#0D1E44,#1A3068);border:1px solid rgba(96,165,250,.22);border-radius:22px;padding:20px;margin-bottom:12px;position:relative;overflow:hidden;cursor:pointer;transition:transform .2s}
+.write-card:hover{transform:translateY(-1px)}
+.wc-glow-bl{position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(96,165,250,.22) 0%,transparent 65%);border-radius:50%;pointer-events:none}
+.wc-week{font-size:11px;font-weight:700;color:var(--blue);letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px}
+.wc-prompt{font-size:17px;font-weight:700;color:var(--text0);margin-bottom:5px;letter-spacing:-.4px;line-height:1.3}
+.wc-hint{font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.5}
+.wc-btns{display:flex;gap:8px}
+.wb-text{flex:1;padding:11px;background:rgba(96,165,250,.18);border:1px solid rgba(96,165,250,.28);border-radius:13px;text-align:center;font-size:13px;font-weight:600;color:var(--blue);cursor:pointer;transition:all .2s}
+.wb-text:hover{background:rgba(96,165,250,.26)}
+.wb-voice{padding:11px 14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:13px;font-size:13px;color:var(--text1);cursor:pointer}
+/* lock banner */
+.lock-banner{background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.16);border-radius:16px;padding:13px 16px;margin-bottom:14px;display:flex;align-items:center;gap:11px}
+.lb-icon{font-size:22px;flex-shrink:0}
+.lb-t{font-size:13px;font-weight:600;color:var(--purple2)}
+.lb-s{font-size:11px;color:var(--text2);margin-top:2px}
+/* memory entries */
+.mem-entry{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:18px;padding:16px;margin-bottom:9px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.mem-entry:hover{border-color:var(--border2);background:rgba(255,255,255,.05)}
+.me-week{font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px;display:flex;align-items:center;gap:6px}
+.me-week-line{flex:1;height:1px;background:linear-gradient(90deg,rgba(96,165,250,.2),transparent)}
+.me-text{font-size:14px;color:var(--text0);line-height:1.6;margin-bottom:10px}
+.me-footer{display:flex;justify-content:space-between;align-items:center}
+.me-author{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px}
+.me-av{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px}
+.me-priv{font-size:10px;color:var(--text2)}
+/* future letter */
+.letter-card{background:linear-gradient(135deg,rgba(245,200,66,.08),rgba(245,200,66,.04));border:1px solid rgba(245,200,66,.16);border-radius:18px;padding:16px;margin-bottom:9px;cursor:pointer;transition:all .2s}
+.letter-card:hover{border-color:rgba(245,200,66,.28)}
+.lc-head{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.lc-icon{width:36px;height:36px;background:rgba(245,200,66,.15);border:1px solid rgba(245,200,66,.22);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.lc-title{font-size:14px;font-weight:600;color:var(--text0)}
+.lc-when{font-size:11px;color:var(--gold);margin-top:1px}
+.lc-preview{font-size:13px;color:var(--text1);line-height:1.55;font-style:italic}
+/* timeline mini */
+.timeline{position:relative;padding-left:20px}
+.timeline::before{content:'';position:absolute;left:7px;top:0;bottom:0;width:1px;background:linear-gradient(180deg,var(--border2),transparent)}
+.tl-item{position:relative;margin-bottom:14px}
+.tl-dot{position:absolute;left:-17px;top:4px;width:9px;height:9px;border-radius:50%;border:2px solid}
+</style>
+</head>
+<body>
+<div class="shell">
+  <canvas class="sf" id="sf"></canvas>
+  <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+
+  <!-- NOTCH -->
+  <div class="notch"><div class="n-cam"></div><div class="n-pill"></div><div class="n-cam"></div></div>
+
+  <!-- STATUS BAR -->
+  <div class="sbar">
+    <div class="sbar-t">21:14</div>
+    <div class="sbar-r"><span style="font-size:14px">▲▲▲</span><span>·</span><span>🔋 92%</span></div>
+  </div>
+
+  <!-- SCROLL -->
+  <div class="scroll" id="mainScroll">
+    <!-- HEADER -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:18px 0 4px">
+      <div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:4px">晚上好，继续加油 ✨</div>
+        <div style="font-size:26px;font-weight:800;color:var(--text0);letter-spacing:-.8px">小明<span style="color:var(--gold)"> ·</span> 四年级</div>
+      </div>
+      <div style="width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--blue));display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 0 2px rgba(167,139,250,.3),0 4px 14px rgba(0,0,0,.4);cursor:pointer;flex-shrink:0">🦊</div>
+    </div>
+
+    <!-- TABS -->
+    <div class="nav-tabs" id="navTabs">
+      <div class="ntab on" onclick="go('home')">首页</div>
+      <div class="ntab" onclick="go('tasks')">任务 · 专注</div>
+      <div class="ntab" onclick="go('games')">专注游戏</div>
+      <div class="ntab" onclick="go('wallet')">零花钱</div>
+      <div class="ntab" onclick="go('memory')">时光机</div>
+    </div>
+
+    <!-- ══════════ HOME ══════════ -->
+    <div class="pv on" id="pv-home">
+      <!-- Hero -->
+      <div class="hero-card" onclick="go('tasks')">
+        <div class="hero-eyebrow">今日作业</div>
+        <div class="hero-h">还有 <em>3 项</em> 等你出发</div>
+        <div class="prog-row"><div class="prog-lbl">完成进度</div><div class="prog-val">1 / 4</div></div>
+        <div class="ptrack"><div class="pfill" style="width:25%"></div></div>
+        <div class="chips">
+          <div class="chip"><div class="chipdot" style="background:var(--purple)"></div>数学 20分钟</div>
+          <div class="chip"><div class="chipdot" style="background:var(--gold)"></div>语文 40分钟</div>
+          <div class="chip"><div class="chipdot" style="background:var(--green)"></div>英语 15分钟</div>
+        </div>
+      </div>
+
+      <!-- Dad -->
+      <div class="dad-card" onclick="go('tasks')">
+        <div class="dad-av">👨</div>
+        <div class="dad-info">
+          <div class="dad-name">爸爸正在同步专注</div>
+          <div class="dad-sub">已专注 32 分钟 · 今晚你们有专注对战</div>
+        </div>
+        <div class="live-pill"><div class="live-dot"></div><div class="live-txt">专注中</div></div>
+      </div>
+
+      <!-- Stats -->
+      <div class="sec-row"><div class="sec-t">今日数据</div></div>
+      <div class="streak-row">
+        <div class="streak-cell"><div class="sc-val" style="color:var(--purple)">45m</div><div class="sc-lbl">专注时长</div></div>
+        <div class="streak-cell"><div class="sc-val" style="color:var(--gold)">7🔥</div><div class="sc-lbl">连续天数</div></div>
+        <div class="streak-cell"><div class="sc-val" style="color:var(--green)">¥47</div><div class="sc-lbl">零花钱余额</div></div>
+      </div>
+
+      <!-- Quick entry -->
+      <div class="sec-row"><div class="sec-t">快捷入口</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:16px">
+        <div onclick="go('tasks')" style="background:linear-gradient(145deg,#1D1050,#2D1878);border-radius:20px;padding:18px 16px;border:1px solid rgba(167,139,250,.12);cursor:pointer;transition:transform .2s;position:relative;overflow:hidden">
+          <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:radial-gradient(circle,rgba(167,139,250,.3) 0%,transparent 65%);border-radius:50%;pointer-events:none"></div>
+          <div style="font-size:28px;margin-bottom:8px">⏱️</div>
+          <div style="font-size:14px;font-weight:700;color:var(--text0);margin-bottom:2px">任务 · 专注</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.35);line-height:1.4">列任务<br>开始做</div>
+        </div>
+        <div onclick="go('games')" style="background:linear-gradient(145deg,#0F2E1C,#1A4830);border-radius:20px;padding:18px 16px;border:1px solid rgba(61,214,140,.1);cursor:pointer;transition:transform .2s;position:relative;overflow:hidden">
+          <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:radial-gradient(circle,rgba(61,214,140,.25) 0%,transparent 65%);border-radius:50%;pointer-events:none"></div>
+          <div style="font-size:28px;margin-bottom:8px">🎯</div>
+          <div style="font-size:14px;font-weight:700;color:var(--text0);margin-bottom:2px">专注游戏</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.35);line-height:1.4">舒尔特<br>最佳 24.3s</div>
+        </div>
+        <div onclick="go('wallet')" style="background:linear-gradient(145deg,#2C1E04,#4A3410);border-radius:20px;padding:18px 16px;border:1px solid rgba(245,200,66,.1);cursor:pointer;transition:transform .2s;position:relative;overflow:hidden">
+          <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:radial-gradient(circle,rgba(245,200,66,.28) 0%,transparent 65%);border-radius:50%;pointer-events:none"></div>
+          <div style="font-size:28px;margin-bottom:8px">💰</div>
+          <div style="font-size:14px;font-weight:700;color:var(--text0);margin-bottom:2px">零花钱</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.35);line-height:1.4">余额 ¥47.50<br>+¥20 待领</div>
+        </div>
+        <div onclick="go('memory')" style="background:linear-gradient(145deg,#0D1E3C,#1A3260);border-radius:20px;padding:18px 16px;border:1px solid rgba(96,165,250,.1);cursor:pointer;transition:transform .2s;position:relative;overflow:hidden">
+          <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:radial-gradient(circle,rgba(96,165,250,.25) 0%,transparent 65%);border-radius:50%;pointer-events:none"></div>
+          <div style="font-size:28px;margin-bottom:8px">📓</div>
+          <div style="font-size:14px;font-weight:700;color:var(--text0);margin-bottom:2px">时光机</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.35);line-height:1.4">本周未写<br>23 条故事</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ TASKS + FOCUS (unified) ══════════ -->
+    <div class="pv" id="pv-tasks">
+      <!-- Voice Input -->
+      <div class="voice-bar" id="voiceBar" onclick="demoVoice()">
+        <div class="mic-wrap" id="micWrap">🎙️</div>
+        <div>
+          <div class="voice-title" id="voiceTitle">语音输入今日作业</div>
+          <div class="voice-sub" id="voiceSub">说出来，AI 帮你整理成任务清单</div>
+        </div>
+      </div>
+
+      <!-- Active focus banner (hidden initially) -->
+      <div class="focus-banner" id="focusBanner" style="display:none">
+        <div class="fb-ring">
+          <svg width="52" height="52" viewBox="0 0 52 52">
+            <defs><linearGradient id="fbg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#A78BFA"/><stop offset="100%" style="stop-color:#7C3AED"/></linearGradient></defs>
+            <circle fill="none" stroke="rgba(255,255,255,.07)" stroke-width="4" cx="26" cy="26" r="22" transform="rotate(-90 26 26)"/>
+            <circle id="fbRing" fill="none" stroke="url(#fbg)" stroke-width="4" stroke-linecap="round" cx="26" cy="26" r="22" transform="rotate(-90 26 26)" stroke-dasharray="138" stroke-dashoffset="103" style="filter:drop-shadow(0 0 5px rgba(167,139,250,.6))"/>
+          </svg>
+          <div class="fb-ring-inner" id="fbPercent">25%</div>
+        </div>
+        <div class="fb-info">
+          <div class="fb-task" id="fbTaskName">数学练习册第5页</div>
+          <div class="fb-timer" id="fbTimer">18:42</div>
+        </div>
+        <div class="fb-actions">
+          <div class="fb-done" onclick="completeActiveTask()">✓ 完成</div>
+          <div class="fb-pause" id="fbPauseBtn" onclick="toggleFocus()">⏸ 暂停</div>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div class="task-progress-bar">
+        <div class="tp-head"><div class="tp-t">今日进度</div><div class="tp-v" id="tpVal">1 / 4 完成</div></div>
+        <div class="ptrack"><div class="pfill" id="tpFill" style="width:25%"></div></div>
+      </div>
+
+      <!-- Task List -->
+      <div id="taskList"></div>
+
+      <!-- Tip -->
+      <div style="background:rgba(167,139,250,.06);border:1px solid rgba(167,139,250,.12);border-radius:14px;padding:11px 14px;margin-top:6px;font-size:12px;color:var(--text1);line-height:1.5">
+        💡 点击任务旁的 <span style="color:var(--purple2);font-weight:600">▶ 开始</span> 按钮，计时器将自动绑定到该任务，完成后一键打卡
+      </div>
+    </div>
+
+    <!-- ══════════ GAMES ══════════ -->
+    <div class="pv" id="pv-games">
+      <div class="hint-bar">💡 建议做作业前先训练 <strong>5–10 分钟</strong>，研究表明专注力热身可提升 30% 效率</div>
+      <div class="sec-row" style="margin-top:0"><div class="sec-t">选择游戏</div></div>
+      <div class="g-scroll" id="gScroll">
+        <div class="gc gc1 active" data-game="schulte" onclick="selectGame('schulte')"><div class="gc-glow"></div><div class="gc-check">✓</div><div class="gc-icon">🔢</div><div class="gc-name">舒尔特方格</div><div class="gc-tag">视觉搜索<br>注意广度</div><div class="gc-best" id="gcBestSchulte">最佳 24.3s ⭐</div></div>
+        <div class="gc gc2" data-game="stroop" onclick="selectGame('stroop')"><div class="gc-glow"></div><div class="gc-check">✓</div><div class="gc-icon">🎨</div><div class="gc-name">Stroop 冲突</div><div class="gc-tag">抑制干扰<br>执行控制</div><div class="gc-best" id="gcBestStroop">最佳 91% ⭐</div></div>
+        <div class="gc gc3" data-game="nback" onclick="selectGame('nback')"><div class="gc-glow"></div><div class="gc-check">✓</div><div class="gc-icon">🧠</div><div class="gc-name">N-back 记忆</div><div class="gc-tag">工作记忆<br>持续注意</div><div class="gc-best" id="gcBestNback">2-back</div></div>
+        <div class="gc gc4" data-game="reaction" onclick="selectGame('reaction')"><div class="gc-glow"></div><div class="gc-check">✓</div><div class="gc-icon">⚡</div><div class="gc-name">反应挑战</div><div class="gc-tag">反应速度<br>抑制平衡</div><div class="gc-best" id="gcBestReaction">218ms</div></div>
+      </div>
+
+      <!-- Schulte Demo -->
+      <div class="schulte-wrap game-panel on" id="schulteWrap" data-panel="schulte">
+        <div class="s-head-row">
+          <div class="s-head-title">🔢 舒尔特方格 · <span class="s-size-tag" id="sSizeTag">5×5</span></div>
+        </div>
+
+        <div class="s-diff-label">选择难度</div>
+        <div class="s-diff-row" id="sDiffRow">
+          <div class="sdtab" data-n="3" onclick="selectSchulteDiff(3)"><div class="sdtab-n">3×3</div><div class="sdtab-l">入门</div></div>
+          <div class="sdtab" data-n="4" onclick="selectSchulteDiff(4)"><div class="sdtab-n">4×4</div><div class="sdtab-l">基础</div></div>
+          <div class="sdtab on" data-n="5" onclick="selectSchulteDiff(5)"><div class="sdtab-n">5×5</div><div class="sdtab-l">标准</div></div>
+          <div class="sdtab" data-n="6" onclick="selectSchulteDiff(6)"><div class="sdtab-n">6×6</div><div class="sdtab-l">进阶</div></div>
+          <div class="sdtab" data-n="7" onclick="selectSchulteDiff(7)"><div class="sdtab-n">7×7</div><div class="sdtab-l">挑战</div></div>
+        </div>
+
+        <div class="s-hud">
+          <div class="s-hud-item"><div class="s-hud-v" id="sNext">—</div><div class="s-hud-l">目标数字</div></div>
+          <div class="s-hud-item"><div class="s-hud-v" id="sTime">0.0s</div><div class="s-hud-l">用时</div></div>
+          <div class="s-hud-item"><div class="s-hud-v" id="sFound">0/25</div><div class="s-hud-l">进度</div></div>
+        </div>
+        <div class="s-target" id="sMsg">点击"开始训练"挑战自己</div>
+        <div class="s-grid" id="sGrid"></div>
+        <button class="s-start" id="sStartBtn" onclick="startSchulte()">开始训练</button>
+        <div class="s-best-row" id="sBestRow">本难度最佳成绩 <b id="sBestVal">24.3s</b></div>
+      </div>
+
+      <!-- Stroop Demo -->
+      <div class="schulte-wrap game-panel" id="stroopWrap" data-panel="stroop">
+        <div class="s-head-row">
+          <div class="s-head-title">🎨 Stroop 色字冲突 · <span class="s-size-tag" id="stSizeTag">5 色</span></div>
+        </div>
+
+        <div class="s-diff-label">选择难度</div>
+        <div class="s-diff-row" id="stDiffRow">
+          <div class="sdtab" data-n="4" onclick="selectStroopDiff(4)"><div class="sdtab-n">4 色</div><div class="sdtab-l">简单</div></div>
+          <div class="sdtab on" data-n="5" onclick="selectStroopDiff(5)"><div class="sdtab-n">5 色</div><div class="sdtab-l">标准</div></div>
+          <div class="sdtab" data-n="6" onclick="selectStroopDiff(6)"><div class="sdtab-n">6 色</div><div class="sdtab-l">挑战</div></div>
+        </div>
+
+        <div class="s-hud">
+          <div class="s-hud-item"><div class="s-hud-v" id="stRound">—</div><div class="s-hud-l">第几题</div></div>
+          <div class="s-hud-item"><div class="s-hud-v" id="stAcc">0%</div><div class="s-hud-l">正确率</div></div>
+          <div class="s-hud-item"><div class="s-hud-v" id="stStreak">0</div><div class="s-hud-l">连续答对</div></div>
+        </div>
+        <div class="s-target" id="stMsg">规则：点击文字的<b style="color:var(--purple2)">显示颜色</b>，不是文字本身的意思</div>
+
+        <div class="stroop-stage" id="stStage">
+          <div class="stroop-idle">点击下方"开始挑战"<br>准备好就立刻开始第 1 题</div>
+        </div>
+        <div class="stroop-swatches" id="stSwatches"></div>
+
+        <button class="s-start" id="stStartBtn" onclick="startStroop()" style="background:linear-gradient(135deg,var(--purple3),#3B1690);box-shadow:0 4px 14px rgba(91,33,182,.4)">开始挑战</button>
+        <div class="s-best-row" id="stBestRow" style="display:none">本难度最佳正确率 <b id="stBestVal">—</b></div>
+      </div>
+
+      <!-- N-back Demo -->
+      <div class="schulte-wrap game-panel" id="nbackWrap" data-panel="nback">
+        <div class="s-head-row">
+          <div class="s-head-title">🧠 N-back 记忆序列 · <span class="s-size-tag" id="nbSizeTag">2-back</span></div>
+        </div>
+
+        <div class="s-diff-label">选择难度</div>
+        <div class="s-diff-row" id="nbDiffRow">
+          <div class="sdtab" data-n="1" onclick="selectNbackDiff(1)"><div class="sdtab-n">1-back</div><div class="sdtab-l">简单</div></div>
+          <div class="sdtab on" data-n="2" onclick="selectNbackDiff(2)"><div class="sdtab-n">2-back</div><div class="sdtab-l">标准</div></div>
+          <div class="sdtab" data-n="3" onclick="selectNbackDiff(3)"><div class="sdtab-n">3-back</div><div class="sdtab-l">挑战</div></div>
+        </div>
+
+        <div class="s-hud">
+          <div class="s-hud-item"><div class="s-hud-v" id="nbProg">—</div><div class="s-hud-l">进度</div></div>
+          <div class="s-hud-item"><div class="s-hud-v" id="nbAcc">0%</div><div class="s-hud-l">正确率</div></div>
+          <div class="s-hud-item"><div class="s-hud-v" id="nbStreak">0</div><div class="s-hud-l">连续答对</div></div>
+        </div>
+        <div class="s-target" id="nbMsg">判断当前图形是否与 <b id="nbRuleN" style="color:var(--green2)">2</b> 步前相同</div>
+
+        <div class="nback-trail" id="nbTrail"></div>
+        <div class="nback-stage" id="nbStage">
+          <div class="nback-idle">点击"开始训练"<br>先记住前面出现的图形</div>
+        </div>
+        <div class="nback-actions">
+          <button class="nback-btn match" id="nbMatchBtn" disabled onclick="answerNback(true)">✓ 一样</button>
+          <button class="nback-btn nomatch" id="nbNomatchBtn" disabled onclick="answerNback(false)">✗ 不一样</button>
+        </div>
+
+        <button class="s-start" id="nbStartBtn" onclick="startNback()" style="background:linear-gradient(135deg,var(--green3),#0F5C38)">开始训练</button>
+        <div class="s-best-row" id="nbBestRow" style="display:none">本难度最佳正确率 <b id="nbBestVal">—</b></div>
+      </div>
+
+      <!-- Reaction Demo -->
+      <div class="schulte-wrap game-panel" id="reactionWrap" data-panel="reaction">
+        <div class="s-head-row">
+          <div class="s-head-title">⚡ 反应速度挑战 · <span class="s-size-tag" id="rcSizeTag">标准</span></div>
+        </div>
+
+        <div class="s-diff-label">选择难度</div>
+        <div class="s-diff-row" id="rcDiffRow">
+          <div class="sdtab" data-n="easy" onclick="selectReactionDiff('easy')"><div class="sdtab-n">简单</div><div class="sdtab-l">900ms</div></div>
+          <div class="sdtab on" data-n="std" onclick="selectReactionDiff('std')"><div class="sdtab-n">标准</div><div class="sdtab-l">700ms</div></div>
+          <div class="sdtab" data-n="fast" onclick="selectReactionDiff('fast')"><div class="sdtab-n">极速</div><div class="sdtab-l">500ms</div></div>
+        </div>
+
+        <div class="s-hud">
+          <div class="s-hud-item"><div class="s-hud-v" id="rcLeft">—</div><div class="s-hud-l">剩余次数</div></div>
+          <div class="s-hud-item"><div class="s-hud-v" id="rcAvg">—</div><div class="s-hud-l">平均反应</div></div>
+          <div class="s-hud-item"><div class="s-hud-v" id="rcMiss">0</div><div class="s-hud-l">失误次数</div></div>
+        </div>
+        <div class="s-target" id="rcMsg">绿色立刻点；<b style="color:var(--coral2)">红色千万别点</b></div>
+
+        <div class="reaction-zone waiting" id="rcZone" onclick="tapReaction()">
+          <div class="rc-zone-icon" id="rcZoneIcon">👆</div>
+          <div class="rc-zone-txt" id="rcZoneTxt">点击"开始挑战"</div>
+          <div class="rc-zone-sub" id="rcZoneSub">绿色出现立即点击，红色出现要忍住</div>
+        </div>
+
+        <button class="s-start" id="rcStartBtn" onclick="startReaction()" style="background:linear-gradient(135deg,#8A1F17,var(--coral));box-shadow:0 4px 14px rgba(255,123,107,.35)">开始挑战</button>
+        <div class="s-best-row" id="rcBestRow" style="display:none">本难度最佳反应 <b id="rcBestVal">—</b></div>
+      </div>
+
+      <!-- Leaderboard -->
+      <div class="sec-row"><div class="sec-t">父子排行榜</div><div class="sec-m">全部游戏</div></div>
+      <div class="lb-row">
+        <div class="lb-rank">🥇</div>
+        <div class="lb-av" style="background:rgba(245,200,66,.15);border:1px solid rgba(245,200,66,.2)">👨</div>
+        <div class="lb-info"><div class="lb-name">爸爸</div><div class="lb-game">舒尔特 5×5</div></div>
+        <div class="lb-score" style="color:var(--gold)">21.8s</div>
+      </div>
+      <div class="lb-row" style="border:1px solid rgba(167,139,250,.25);background:rgba(167,139,250,.06)">
+        <div class="lb-rank">🥈</div>
+        <div class="lb-av" style="background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.2)">🦊</div>
+        <div class="lb-info"><div class="lb-name">小明</div><div class="lb-game">舒尔特 5×5</div></div>
+        <div class="lb-score" style="color:var(--purple)">24.3s</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank">🥈</div>
+        <div class="lb-av" style="background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.2)">🦊</div>
+        <div class="lb-info"><div class="lb-name">小明</div><div class="lb-game">Stroop 冲突</div></div>
+        <div class="lb-score" style="color:var(--blue)">91%</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank">🥉</div>
+        <div class="lb-av" style="background:rgba(61,214,140,.15);border:1px solid rgba(61,214,140,.2)">🦊</div>
+        <div class="lb-info"><div class="lb-name">小明</div><div class="lb-game">N-back 2-back</div></div>
+        <div class="lb-score" style="color:var(--green)">88%</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank">🥉</div>
+        <div class="lb-av" style="background:rgba(255,123,107,.15);border:1px solid rgba(255,123,107,.2)">👨</div>
+        <div class="lb-info"><div class="lb-name">爸爸</div><div class="lb-game">反应挑战 · 标准</div></div>
+        <div class="lb-score" style="color:var(--coral)">218ms</div>
+      </div>
+
+      <!-- Progress chart -->
+      <div class="sec-row"><div class="sec-t" id="trendSecTitle">舒尔特 · 近7次</div><div class="sec-m">详情</div></div>
+      <div class="week-chart">
+        <div class="wc-head"><div class="wc-title" id="trendTitle">用时趋势（越低越好）</div><div class="wc-val" id="trendVal">↓ 进步中</div></div>
+        <div class="wc-bars" id="wcBars"></div>
+      </div>
+    </div>
+
+    <!-- ══════════ WALLET ══════════ -->
+    <div class="pv" id="pv-wallet">
+      <div class="wallet-hero">
+        <div class="wh-glow"></div>
+        <div class="wh-label">我的零花钱</div>
+        <div class="wh-balance"><sup>¥</sup>47<span class="cents">.50</span></div>
+        <div class="wh-sub">距上次记录已过 3 天</div>
+        <div class="wh-stats">
+          <div class="whs"><div class="whs-v" style="color:var(--green)">+¥62</div><div class="whs-l">本月获得</div></div>
+          <div class="whs"><div class="whs-v" style="color:var(--coral)">-¥14.50</div><div class="whs-l">本月扣款</div></div>
+          <div class="whs"><div class="whs-v" style="color:var(--gold)">8次</div><div class="whs-l">获奖次数</div></div>
+        </div>
+      </div>
+
+      <!-- Pending -->
+      <div class="pending-card">
+        <div class="pending-head"><div class="p-blink"></div><div class="p-label">有一笔奖励待你确认</div></div>
+        <div class="p-reason">🏆 数学单元测试满分！</div>
+        <div class="p-footer">
+          <div>
+            <div class="p-by">爸爸 · 今天 20:30 · 附试卷照片</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:3px">理由：上次说好满分奖励</div>
+          </div>
+          <div class="p-amt">+¥20</div>
+        </div>
+        <div class="p-btns">
+          <div class="p-agree" onclick="this.textContent='✅ 已领取！';this.style.opacity='.5';this.style.cursor='default'">✓ 同意领取</div>
+          <div class="p-evid">📷 查看证据</div>
+        </div>
+      </div>
+
+      <!-- Month bars -->
+      <div class="month-mini">
+        <div class="mm-head"><div class="mm-title">本月收支</div><div class="mm-tag">6月 · 4周</div></div>
+        <div class="mm-bars" id="mmBars"></div>
+      </div>
+
+      <div class="sec-row"><div class="sec-t">账单记录</div><div class="sec-m">全部</div></div>
+      <div class="ledger-item">
+        <div class="li-icon li-plus">⭐</div>
+        <div class="li-info">
+          <div class="li-reason">主动帮妈妈洗碗三天</div>
+          <div class="li-meta"><span class="li-evid-tag">📹 视频</span><span class="li-consent">✓ 已同意</span><span>6月15日</span></div>
+        </div>
+        <div class="li-amt amt-p">+¥15</div>
+      </div>
+      <div class="ledger-item">
+        <div class="li-icon li-minus">⚠️</div>
+        <div class="li-info">
+          <div class="li-reason">超时玩游戏 1 小时</div>
+          <div class="li-meta"><span class="li-evid-tag">📱 截图</span><span class="li-consent">✓ 已同意</span><span>6月12日</span></div>
+        </div>
+        <div class="li-amt amt-m">-¥10</div>
+      </div>
+      <div class="ledger-item">
+        <div class="li-icon li-plus">⭐</div>
+        <div class="li-info">
+          <div class="li-reason">语文期中 95 分</div>
+          <div class="li-meta"><span class="li-evid-tag">📷 照片</span><span class="li-consent">✓ 已同意</span><span>6月8日</span></div>
+        </div>
+        <div class="li-amt amt-p">+¥30</div>
+      </div>
+      <div class="ledger-item">
+        <div class="li-icon li-minus">⚠️</div>
+        <div class="li-info">
+          <div class="li-reason">说谎睡前刷了30分钟手机</div>
+          <div class="li-meta"><span class="li-evid-tag">🎙️ 录音</span><span class="li-consent">✓ 已同意</span><span>6月5日</span></div>
+        </div>
+        <div class="li-amt amt-m">-¥4.50</div>
+      </div>
+      <div class="ledger-item">
+        <div class="li-icon li-plus">⭐</div>
+        <div class="li-info">
+          <div class="li-reason">连续7天按时完成作业</div>
+          <div class="li-meta"><span class="li-consent">✓ 已同意</span><span>6月3日</span></div>
+        </div>
+        <div class="li-amt amt-p">+¥17</div>
+      </div>
+    </div>
+
+    <!-- ══════════ MEMORY ══════════ -->
+    <div class="pv" id="pv-memory">
+      <div class="write-card">
+        <div class="wc-glow-bl"></div>
+        <div class="wc-week">📓 第 24 周 · 6月18日</div>
+        <div class="wc-prompt">这周，什么事让你印象最深？</div>
+        <div class="wc-hint">记下来，18岁的你打开时间锁时<br>会很感激现在的你留下了这段故事</div>
+        <div class="wc-btns">
+          <div class="wb-text">✏️ 文字写下来</div>
+          <div class="wb-voice">🎙️ 说出来</div>
+        </div>
+      </div>
+
+      <!-- Lock status -->
+      <div class="lock-banner">
+        <div class="lb-icon">🔒</div>
+        <div>
+          <div class="lb-t">你已写下 <span style="color:var(--gold);font-weight:700">23</span> 个成长故事</div>
+          <div class="lb-s">18岁时全部解锁，只有爸爸妈妈现在能看</div>
+        </div>
+      </div>
+
+      <!-- Letters from dad -->
+      <div class="sec-row"><div class="sec-t">爸爸的来信</div><div class="sec-m">全部</div></div>
+      <div class="letter-card">
+        <div class="lc-head">
+          <div class="lc-icon">💌</div>
+          <div><div class="lc-title">写给18岁的你</div><div class="lc-when">🔒 2034年6月22日 解锁</div></div>
+        </div>
+        <div class="lc-preview">"那天你问我，为什么修了半天的自行车还是坏的——我没有告诉你，其实我也不会修…"</div>
+      </div>
+      <div class="letter-card">
+        <div class="lc-head">
+          <div class="lc-icon">💌</div>
+          <div><div class="lc-title">写给16岁的你</div><div class="lc-when">🔒 2032年6月22日 解锁</div></div>
+        </div>
+        <div class="lc-preview">"你现在还不知道，那条你最喜欢骑车的路，其实是爸爸专门绕远选的…"</div>
+      </div>
+
+      <!-- Dad's records -->
+      <div class="sec-row"><div class="sec-t">爸爸的记录</div><div class="sec-m">时间线</div></div>
+      <div class="timeline">
+        <div class="tl-item">
+          <div class="tl-dot" style="background:var(--blue);border-color:var(--blue2)"></div>
+          <div class="mem-entry">
+            <div class="me-week">第 24 周 · 6月18日<div class="me-week-line"></div></div>
+            <div class="me-text">今天小明主动提出来帮我修自行车，折腾了整个下午，虽然没修好，但那个认真劲儿让我特别感动。他说"爸，下次我查教程"。</div>
+            <div class="me-footer">
+              <div class="me-author"><div class="me-av" style="background:rgba(61,214,140,.2)">👨</div>爸爸 · 21:30</div>
+              <div class="me-priv">家庭可见</div>
+            </div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot" style="background:var(--purple);border-color:var(--purple2)"></div>
+          <div class="mem-entry">
+            <div class="me-week">第 23 周 · 6月11日<div class="me-week-line"></div></div>
+            <div class="me-text">带小明爬紫金山，他一路上问了二十几个为什么。问我为什么叶子是绿的，为什么山顶风更大……最后一个"为什么爸爸你什么都知道"，让我笑了很久。</div>
+            <div class="me-footer">
+              <div class="me-author"><div class="me-av" style="background:rgba(61,214,140,.2)">👨</div>爸爸 · 22:10</div>
+              <div class="me-priv">家庭可见</div>
+            </div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot" style="background:var(--gold);border-color:var(--gold2)"></div>
+          <div class="mem-entry">
+            <div class="me-week">第 22 周 · 6月4日<div class="me-week-line"></div></div>
+            <div class="me-text">小明今天说想学吉他，因为班上有个同学弹得很好。我说好，咱们一起学。他眼睛一亮。</div>
+            <div class="me-footer">
+              <div class="me-author"><div class="me-av" style="background:rgba(61,214,140,.2)">👨</div>爸爸 · 21:55</div>
+              <div class="me-priv">家庭可见</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /scroll -->
+
+  <!-- BOTTOM NAV -->
+  <div class="bnav">
+    <div class="bni on" id="bni-home" onclick="go('home')">
+      <div class="bni-dot"></div>
+      <div class="bni-icon">🏠</div><div class="bni-lbl">首页</div>
+    </div>
+    <div class="bni" id="bni-tasks" onclick="go('tasks')">
+      <div class="bni-icon">📋</div><div class="bni-lbl">任务</div>
+    </div>
+    <div style="flex:1;display:flex;justify-content:center;align-items:flex-start;padding-top:0">
+      <div class="fab" onclick="go('games')">🎯</div>
+    </div>
+    <div class="bni" id="bni-wallet" onclick="go('wallet')">
+      <div class="bni-icon">💰</div><div class="bni-lbl">零花钱</div>
+    </div>
+    <div class="bni" id="bni-memory" onclick="go('memory')">
+      <div class="bni-icon">📓</div><div class="bni-lbl">时光机</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STARFIELD ──
+const sf=document.getElementById('sf'),ctx=sf.getContext('2d');
+sf.width=393;sf.height=900;
+const stars=Array.from({length:130},()=>({x:Math.random()*393,y:Math.random()*900,r:.2+Math.random()*1.1,a:Math.random(),sp:.003+Math.random()*.008,ph:Math.random()*Math.PI*2}));
+function drawSF(t){ctx.clearRect(0,0,393,900);stars.forEach(s=>{const a=s.a*(.35+.65*Math.sin(t*s.sp+s.ph));ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${a})`;ctx.fill()});requestAnimationFrame(drawSF)}
+requestAnimationFrame(drawSF);
+
+// ── PAGE NAV ──
+const pages=['home','tasks','games','wallet','memory'];
+function go(id){
+  if(id!=='games')stopAllGameTimers();
+  pages.forEach(p=>{
+    const el=document.getElementById('pv-'+p);
+    if(el)el.classList.toggle('on',p===id);
+  });
+  document.querySelectorAll('.ntab').forEach((t,i)=>{
+    const ids=['home','tasks','games','wallet','memory'];
+    t.classList.toggle('on',ids[i]===id);
+  });
+  document.querySelectorAll('.bni[id]').forEach(n=>{
+    n.classList.remove('on');
+    const d=n.querySelector('.bni-dot');
+    if(d)d.remove();
+  });
+  const bni=document.getElementById('bni-'+id);
+  if(bni){
+    bni.classList.add('on');
+    const dot=document.createElement('div');
+    dot.className='bni-dot';
+    bni.insertBefore(dot,bni.firstChild);
+  }
+  document.getElementById('mainScroll').scrollTop=0;
+}
+
+// ── TASKS DATA ──
+const TASKS=[
+  {id:0,subj:'math',subjLabel:'数学',name:'练习册第5页，15道计算题',dur:'20分钟',done:false,active:false},
+  {id:1,subj:'en',subjLabel:'英语',name:'背诵单词 Unit 7，共20个',dur:'15分钟',done:false,active:false},
+  {id:2,subj:'cn',subjLabel:'语文',name:'日记一篇，不少于200字',dur:'40分钟',done:false,active:false},
+  {id:3,subj:'oth',subjLabel:'阅读',name:'课外书阅读30分钟',dur:'30分钟',done:true,active:false},
+];
+let activeTaskId=-1;
+const subjClass={math:'s-math',en:'s-en',cn:'s-cn',oth:'s-oth'};
+
+function renderTasks(){
+  const list=document.getElementById('taskList');
+  list.innerHTML='';
+  TASKS.forEach(t=>{
+    const div=document.createElement('div');
+    div.className='ti'+(t.done?' done-task':'')+(t.active?' active-task':'');
+    div.id='ti-'+t.id;
+    const focusBtnHTML=t.done?'':t.active?
+      `<div class="ti-focus-btn paused" onclick="pauseTask(event,${t.id})">⏸ 专注中</div>`:
+      `<div class="ti-focus-btn" onclick="startTask(event,${t.id})">▶ 开始</div>`;
+    div.innerHTML=`
+      <span class="ti-subj ${subjClass[t.subj]}">${t.subjLabel}</span>
+      <div class="ti-body">
+        <div class="ti-name">${t.name}</div>
+        <div class="ti-meta">${t.done?'<span style="color:var(--green)">✓ 已完成</span>':'<span>约 '+t.dur+'</span>'}</div>
+      </div>
+      ${focusBtnHTML}
+      <div class="sl-wrap"><div class="sl-track${t.done?' on':''}" onclick="toggleTask(event,${t.id})"><div class="sl-thumb"></div></div></div>
+    `;
+    list.appendChild(div);
+  });
+  const done=TASKS.filter(t=>t.done).length;
+  const pct=done/TASKS.length*100;
+  document.getElementById('tpFill').style.width=pct+'%';
+  document.getElementById('tpVal').textContent=done+' / '+TASKS.length+' 完成';
+}
+
+function toggleTask(e,id){
+  e.stopPropagation();
+  const t=TASKS.find(t=>t.id===id);
+  if(!t)return;
+  t.done=!t.done;
+  if(t.done&&t.active){t.active=false;activeTaskId=-1;hideFocusBanner()}
+  renderTasks();
+}
+
+// ── FOCUS INTEGRATION ──
+let focusRunning=false,focusSecs=25*60,focusTotal=25*60,focusInterval=null;
+
+function startTask(e,id){
+  e.stopPropagation();
+  if(activeTaskId===id)return;
+  if(activeTaskId!==-1){const prev=TASKS.find(t=>t.id===activeTaskId);if(prev)prev.active=false}
+  activeTaskId=id;
+  const t=TASKS.find(t=>t.id===id);
+  t.active=true;
+  focusSecs=25*60;focusTotal=25*60;focusRunning=true;
+  renderTasks();
+  showFocusBanner(t.name);
+  startFocusTick();
+}
+
+function pauseTask(e,id){
+  e.stopPropagation();
+  focusRunning=!focusRunning;
+  document.getElementById('fbPauseBtn').textContent=focusRunning?'⏸ 暂停':'▶ 继续';
+}
+
+function completeActiveTask(){
+  if(activeTaskId===-1)return;
+  const t=TASKS.find(t=>t.id===activeTaskId);
+  if(t){t.done=true;t.active=false}
+  activeTaskId=-1;
+  focusRunning=false;
+  clearInterval(focusInterval);
+  hideFocusBanner();
+  renderTasks();
+}
+
+function showFocusBanner(name){
+  document.getElementById('focusBanner').style.display='flex';
+  document.getElementById('fbTaskName').textContent=name;
+}
+function hideFocusBanner(){document.getElementById('focusBanner').style.display='none'}
+
+function startFocusTick(){
+  clearInterval(focusInterval);
+  focusInterval=setInterval(()=>{
+    if(!focusRunning)return;
+    if(focusSecs>0)focusSecs--;
+    const m=String(Math.floor(focusSecs/60)).padStart(2,'0');
+    const s=String(focusSecs%60).padStart(2,'0');
+    document.getElementById('fbTimer').textContent=m+':'+s;
+    const pct=Math.round((1-focusSecs/focusTotal)*100);
+    document.getElementById('fbPercent').textContent=pct+'%';
+    const circ=138,offset=circ*(focusSecs/focusTotal);
+    document.getElementById('fbRing').style.strokeDashoffset=offset;
+    // also update focus page
+    const big=document.getElementById('bigTime');
+    if(big)big.textContent=m+':'+s;
+    const bigRing=document.getElementById('bigRing');
+    if(bigRing){const bc=2*Math.PI*75,bo=bc*(focusSecs/focusTotal);bigRing.style.strokeDashoffset=bo}
+    const bigPct=document.getElementById('bigPct');
+    if(bigPct)bigPct.textContent=Math.round((1-focusSecs/focusTotal)*100)+'%';
+    if(focusSecs===0){focusRunning=false;clearInterval(focusInterval)}
+  },1000);
+}
+
+function toggleFocus(){
+  focusRunning=!focusRunning;
+  document.getElementById('fbPauseBtn').textContent=focusRunning?'⏸ 暂停':'▶ 继续';
+}
+
+// ── VOICE DEMO ──
+let vs=0;
+const vstates=[
+  ['语音输入今日作业','说出来，AI 帮你整理成任务清单','🎙️','rgba(167,139,250,.2)'],
+  ['正在聆听…','松开停止录音','🔴','rgba(255,107,107,.2)'],
+  ['AI 整理任务中…','识别到：数学、英语、语文','✨','rgba(245,200,66,.2)'],
+  ['语音输入今日作业','说出来，AI 帮你整理成任务清单','🎙️','rgba(167,139,250,.2)'],
+];
+function demoVoice(){
+  vs=(vs+1)%vstates.length;const s=vstates[vs];
+  document.getElementById('voiceTitle').textContent=s[0];
+  document.getElementById('voiceSub').textContent=s[1];
+  document.getElementById('micWrap').textContent=s[2];
+  document.getElementById('micWrap').style.background=s[3];
+}
+
+// ── GAME SWITCHER ──
+function stopAllGameTimers(){
+  if(sTmr){clearInterval(sTmr);sTmr=null;sRun=false}
+  if(typeof stTmr!=='undefined'&&stTmr){clearTimeout(stTmr);stTmr=null}
+  stRunning=false;
+  if(typeof nbTmr!=='undefined'&&nbTmr){clearTimeout(nbTmr);nbTmr=null}
+  nbRunning=false;
+  if(typeof rcWaitTmr!=='undefined'&&rcWaitTmr){clearTimeout(rcWaitTmr);rcWaitTmr=null}
+  if(typeof rcWindowTmr!=='undefined'&&rcWindowTmr){clearTimeout(rcWindowTmr);rcWindowTmr=null}
+  rcRunning=false;
+}
+
+function selectGame(key){
+  stopAllGameTimers();
+  document.querySelectorAll('.gc[data-game]').forEach(c=>{
+    c.classList.toggle('active',c.dataset.game===key);
+  });
+  document.querySelectorAll('.game-panel[data-panel]').forEach(p=>{
+    p.classList.toggle('on',p.dataset.panel===key);
+  });
+  renderTrend(key);
+}
+
+// ── TREND CHART (per game) ──
+const GAME_TREND={
+  schulte:{title:'用时趋势（越低越好）',arrow:'↓ 进步中',data:[38,35,31,29,27,26,24],labels:['周一','周二','周三','周四','周五','周六','今天'],unit:'s',todayUp:false,sectionName:'舒尔特'},
+  stroop:{title:'正确率趋势（越高越好）',arrow:'↑ 进步中',data:[72,76,80,83,85,88,91],labels:['周一','周二','周三','周四','周五','周六','今天'],unit:'%',todayUp:true,sectionName:'Stroop'},
+  nback:{title:'正确率趋势（越高越好）',arrow:'↑ 进步中',data:[58,62,65,70,74,80,88],labels:['周一','周二','周三','周四','周五','周六','今天'],unit:'%',todayUp:true,sectionName:'N-back'},
+  reaction:{title:'反应时趋势（越低越好）',arrow:'↓ 进步中',data:[290,275,260,248,235,224,218],labels:['周一','周二','周三','周四','周五','周六','今天'],unit:'ms',todayUp:false,sectionName:'反应挑战'},
+};
+function renderTrend(key){
+  const cfg=GAME_TREND[key];if(!cfg)return;
+  document.getElementById('trendSecTitle').textContent=cfg.sectionName+' · 近7次';
+  document.getElementById('trendTitle').textContent=cfg.title;
+  document.getElementById('trendVal').textContent=cfg.arrow;
+  buildWCBars(cfg.data,cfg.labels);
+}
+
+// ── SCHULTE ──
+function playSchulte(){
+  document.getElementById('schulteWrap').scrollIntoView({behavior:'smooth',block:'center'});
+}
+let sSize=5;                // current grid dimension (N×N)
+let sNums=[],sNext=1,sElapsed=0,sRun=false,sTmr=null;
+const sBestTimes={3:null,4:null,5:24.3,6:null,7:null}; // demo seed: 5×5 has a sample best
+
+const SGRID_FONT={3:24,4:20,5:16,6:13,7:11};
+const SGRID_GAP={3:7,4:6,5:4,6:3,7:2};
+
+function selectSchulteDiff(n){
+  if(sRun){ // don't allow switching mid-run; gentle nudge instead
+    document.getElementById('sMsg').textContent='请先完成或等待本轮结束再切换难度';
+    return;
+  }
+  sSize=n;
+  document.querySelectorAll('.sdtab').forEach(el=>{
+    el.classList.toggle('on',Number(el.dataset.n)===n);
+  });
+  document.getElementById('sSizeTag').textContent=n+'×'+n;
+  document.getElementById('sFound').textContent='0/'+(n*n);
+  document.getElementById('sNext').textContent='—';
+  document.getElementById('sTime').textContent='0.0s';
+  document.getElementById('sMsg').textContent='点击"开始训练"挑战自己';
+  document.getElementById('sStartBtn').textContent='开始训练';
+  updateBestRow();
+  initSGrid();
+}
+
+function updateBestRow(){
+  const best=sBestTimes[sSize];
+  const row=document.getElementById('sBestRow');
+  const val=document.getElementById('sBestVal');
+  if(best){
+    val.textContent=best.toFixed(1)+'s';
+    row.style.display='flex';
+  }else{
+    row.style.display='none';
+  }
+}
+
+function initSGrid(){
+  const total=sSize*sSize;
+  const nums=Array.from({length:total},(_,i)=>i+1);
+  for(let i=nums.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[nums[i],nums[j]]=[nums[j],nums[i]]}
+  sNums=nums;
+  const g=document.getElementById('sGrid');
+  g.style.setProperty('--sgrid-n',sSize);
+  g.style.setProperty('--sgrid-gap',(SGRID_GAP[sSize]||4)+'px');
+  g.style.setProperty('--sgrid-fs',(SGRID_FONT[sSize]||16)+'px');
+  g.innerHTML='';
+  nums.forEach(n=>{
+    const c=document.createElement('div');c.className='sc';c.textContent=n;c.id='sc'+n;
+    c.onclick=()=>clickS(n);g.appendChild(c);
+  });
+}
+
+function startSchulte(){
+  const total=sSize*sSize;
+  sNext=1;sElapsed=0;sRun=true;
+  document.getElementById('sStartBtn').textContent='重新开始';
+  document.getElementById('sNext').textContent=sNext;
+  document.getElementById('sFound').textContent='0/'+total;
+  document.getElementById('sMsg').textContent='找到 '+sNext+' ，加油！';
+  initSGrid();
+  if(sTmr)clearInterval(sTmr);
+  sTmr=setInterval(()=>{if(!sRun)return;sElapsed+=.1;document.getElementById('sTime').textContent=sElapsed.toFixed(1)+'s'},100);
+}
+
+function clickS(n){
+  if(!sRun)return;
+  const total=sSize*sSize;
+  const c=document.getElementById('sc'+n);
+  if(n===sNext){
+    c.classList.add('found');c.onclick=null;sNext++;
+    document.getElementById('sNext').textContent=sNext<=total?sNext:'✓';
+    document.getElementById('sFound').textContent=(sNext-1)+'/'+total;
+    if(sNext>total){
+      sRun=false;clearInterval(sTmr);
+      const isNewBest=!sBestTimes[sSize]||sElapsed<sBestTimes[sSize];
+      if(isNewBest){sBestTimes[sSize]=sElapsed;updateBestRow()}
+      document.getElementById('sMsg').textContent='完成！用时 '+sElapsed.toFixed(1)+' 秒'+(isNewBest?' 🎉 新纪录！':' 🎉');
+    }
+    else document.getElementById('sMsg').textContent='找到 '+sNext+' ，继续！';
+  }else{c.classList.add('wrong');setTimeout(()=>c.classList.remove('wrong'),350)}
+}
+
+updateBestRow();
+initSGrid();
+
+// ── STROOP ──
+const STROOP_COLORS=[
+  {key:'red',label:'红',value:'#FF7B6B'},
+  {key:'green',label:'绿',value:'#3DD68C'},
+  {key:'blue',label:'蓝',value:'#60A5FA'},
+  {key:'yellow',label:'黄',value:'#F5C842'},
+  {key:'purple',label:'紫',value:'#A78BFA'},
+  {key:'orange',label:'橙',value:'#FF9F43'},
+];
+let stSize=5,stRound=0,stCorrect=0,stStreak=0,stAnswer=null,stRunning=false,stLocked=false,stTmr=null;
+const stBestRates={4:null,5:91,6:null};
+
+function updateStroopBest(){
+  const row=document.getElementById('stBestRow'),val=document.getElementById('stBestVal');
+  const best=stBestRates[stSize];
+  if(best){val.textContent=best+'%';row.style.display='flex'}
+  else row.style.display='none';
+}
+
+function renderStroopSwatches(){
+  const wrap=document.getElementById('stSwatches');
+  wrap.innerHTML='';
+  STROOP_COLORS.slice(0,stSize).forEach(c=>{
+    const b=document.createElement('button');
+    b.type='button';
+    b.className='swatch';
+    b.style.background=c.value;
+    b.setAttribute('aria-label',c.label);
+    b.onclick=()=>chooseStroop(c.key,b);
+    b.innerHTML='<span class="swatch-check">✓</span>';
+    wrap.appendChild(b);
+  });
+}
+
+function selectStroopDiff(n){
+  if(stRunning){
+    document.getElementById('stMsg').textContent='请先完成本轮挑战再切换难度';
+    return;
+  }
+  stSize=n;
+  document.querySelectorAll('#stDiffRow .sdtab').forEach(el=>{
+    el.classList.toggle('on',Number(el.dataset.n)===n);
+  });
+  document.getElementById('stSizeTag').textContent=n+' 色';
+  document.getElementById('stRound').textContent='—';
+  document.getElementById('stAcc').textContent='0%';
+  document.getElementById('stStreak').textContent='0';
+  document.getElementById('stMsg').innerHTML='规则：点击文字的<b style="color:var(--purple2)">显示颜色</b>，不是文字本身的意思';
+  document.getElementById('stStage').innerHTML='<div class="stroop-idle">点击下方"开始挑战"<br>准备好就立刻开始第 1 题</div>';
+  document.getElementById('stStartBtn').textContent='开始挑战';
+  renderStroopSwatches();
+  updateStroopBest();
+}
+
+function startStroop(){
+  clearTimeout(stTmr);
+  stRound=0;stCorrect=0;stStreak=0;stRunning=true;stLocked=false;
+  document.getElementById('stStartBtn').textContent='重新开始';
+  document.getElementById('stAcc').textContent='0%';
+  document.getElementById('stStreak').textContent='0';
+  renderStroopSwatches();
+  nextStroop();
+}
+
+function nextStroop(){
+  if(!stRunning)return;
+  if(stRound>=10){
+    finishStroop();
+    return;
+  }
+  stRound++;
+  stLocked=false;
+  const pool=STROOP_COLORS.slice(0,stSize);
+  const word=pool[Math.floor(Math.random()*pool.length)];
+  const color=pool[Math.floor(Math.random()*pool.length)];
+  stAnswer=color.key;
+  document.querySelectorAll('#stSwatches .swatch').forEach(el=>el.classList.remove('correct','wrong','disabled'));
+  document.getElementById('stRound').textContent=stRound+'/10';
+  document.getElementById('stMsg').textContent='点击文字显示出来的颜色';
+  document.getElementById('stStage').innerHTML=`<div class="stroop-word" style="color:${color.value}">${word.label}</div>`;
+}
+
+function chooseStroop(key,el){
+  if(!stRunning||stLocked)return;
+  stLocked=true;
+  const ok=key===stAnswer;
+  if(ok){stCorrect++;stStreak++;el.classList.add('correct')}
+  else{stStreak=0;el.classList.add('wrong')}
+  const acc=Math.round(stCorrect/stRound*100);
+  document.getElementById('stAcc').textContent=acc+'%';
+  document.getElementById('stStreak').textContent=stStreak;
+  document.getElementById('stMsg').textContent=ok?'答对了，继续保持':'看颜色，不看文字意思';
+  document.querySelectorAll('#stSwatches .swatch').forEach(btn=>btn.classList.add('disabled'));
+  stTmr=setTimeout(nextStroop,520);
+}
+
+function finishStroop(){
+  stRunning=false;stLocked=false;clearTimeout(stTmr);
+  const acc=Math.round(stCorrect/10*100);
+  if(!stBestRates[stSize]||acc>stBestRates[stSize])stBestRates[stSize]=acc;
+  document.getElementById('stMsg').textContent='完成！本轮正确率 '+acc+'%';
+  document.getElementById('stStartBtn').textContent='再来一轮';
+  document.querySelectorAll('#stSwatches .swatch').forEach(btn=>btn.classList.add('disabled'));
+  updateStroopBest();
+}
+
+renderStroopSwatches();
+updateStroopBest();
+
+// ── N-BACK ──
+const NBACK_SHAPES=['●','■','▲','◆','★','⬟'];
+let nbLevel=2,nbIndex=0,nbCorrect=0,nbStreak=0,nbRunning=false,nbAwait=false,nbSeq=[],nbTmr=null;
+const nbBestRates={1:null,2:88,3:null};
+
+function updateNbackBest(){
+  const row=document.getElementById('nbBestRow'),val=document.getElementById('nbBestVal');
+  const best=nbBestRates[nbLevel];
+  if(best){val.textContent=best+'%';row.style.display='flex'}
+  else row.style.display='none';
+}
+
+function setNbackButtons(enabled){
+  document.getElementById('nbMatchBtn').disabled=!enabled;
+  document.getElementById('nbNomatchBtn').disabled=!enabled;
+}
+
+function selectNbackDiff(n){
+  if(nbRunning){
+    document.getElementById('nbMsg').textContent='请先完成本轮训练再切换难度';
+    return;
+  }
+  nbLevel=n;
+  document.querySelectorAll('#nbDiffRow .sdtab').forEach(el=>{
+    el.classList.toggle('on',Number(el.dataset.n)===n);
+  });
+  document.getElementById('nbSizeTag').textContent=n+'-back';
+  document.getElementById('nbRuleN').textContent=n;
+  document.getElementById('nbProg').textContent='—';
+  document.getElementById('nbAcc').textContent='0%';
+  document.getElementById('nbStreak').textContent='0';
+  document.getElementById('nbTrail').innerHTML='';
+  document.getElementById('nbStage').innerHTML='<div class="nback-idle">点击"开始训练"<br>先记住前面出现的图形</div>';
+  document.getElementById('nbStartBtn').textContent='开始训练';
+  setNbackButtons(false);
+  updateNbackBest();
+}
+
+function buildNbackSeq(){
+  nbSeq=[];
+  for(let i=0;i<10;i++){
+    if(i>=nbLevel&&Math.random()<.38){
+      nbSeq.push(nbSeq[i-nbLevel]);
+    }else{
+      let shape=NBACK_SHAPES[Math.floor(Math.random()*NBACK_SHAPES.length)];
+      if(i>=nbLevel){
+        while(shape===nbSeq[i-nbLevel])shape=NBACK_SHAPES[Math.floor(Math.random()*NBACK_SHAPES.length)];
+      }
+      nbSeq.push(shape);
+    }
+  }
+}
+
+function startNback(){
+  clearTimeout(nbTmr);
+  buildNbackSeq();
+  nbIndex=0;nbCorrect=0;nbStreak=0;nbRunning=true;nbAwait=false;
+  document.getElementById('nbStartBtn').textContent='重新开始';
+  document.getElementById('nbAcc').textContent='0%';
+  document.getElementById('nbStreak').textContent='0';
+  setNbackButtons(false);
+  nextNback();
+}
+
+function renderNbackTrail(){
+  const wrap=document.getElementById('nbTrail');
+  wrap.innerHTML='';
+  const start=Math.max(0,nbIndex-4);
+  nbSeq.slice(start,nbIndex+1).forEach((shape,i,arr)=>{
+    const item=document.createElement('div');
+    item.className='nback-trail-item'+(i===arr.length-1?' cur':'');
+    item.textContent=shape;
+    wrap.appendChild(item);
+  });
+}
+
+function nextNback(){
+  if(!nbRunning)return;
+  if(nbIndex>=nbSeq.length){
+    finishNback();
+    return;
+  }
+  nbAwait=nbIndex>=nbLevel;
+  document.getElementById('nbProg').textContent=(nbIndex+1)+'/'+nbSeq.length;
+  document.getElementById('nbStage').innerHTML=`<div class="nback-memlabel">${nbLevel}-back</div><div class="nback-shape">${nbSeq[nbIndex]}</div>`;
+  renderNbackTrail();
+  document.getElementById('nbMsg').textContent=nbAwait?'判断当前图形是否与 '+nbLevel+' 步前相同':'先记住这个图形';
+  setNbackButtons(nbAwait);
+  if(!nbAwait){
+    nbTmr=setTimeout(()=>{nbIndex++;nextNback()},850);
+  }
+}
+
+function answerNback(isMatch){
+  if(!nbRunning||!nbAwait)return;
+  clearTimeout(nbTmr);
+  const actual=nbSeq[nbIndex]===nbSeq[nbIndex-nbLevel];
+  const ok=isMatch===actual;
+  const btn=document.getElementById(isMatch?'nbMatchBtn':'nbNomatchBtn');
+  btn.classList.add(ok?'correct':'wrong');
+  setTimeout(()=>btn.classList.remove('correct','wrong'),360);
+  if(ok){nbCorrect++;nbStreak++}else nbStreak=0;
+  const answered=nbIndex-nbLevel+1;
+  document.getElementById('nbAcc').textContent=Math.round(nbCorrect/answered*100)+'%';
+  document.getElementById('nbStreak').textContent=nbStreak;
+  document.getElementById('nbMsg').textContent=ok?'判断正确':'这题不对，下一题稳住';
+  nbAwait=false;
+  setNbackButtons(false);
+  nbTmr=setTimeout(()=>{nbIndex++;nextNback()},480);
+}
+
+function finishNback(){
+  nbRunning=false;nbAwait=false;clearTimeout(nbTmr);setNbackButtons(false);
+  const total=Math.max(1,nbSeq.length-nbLevel);
+  const acc=Math.round(nbCorrect/total*100);
+  if(!nbBestRates[nbLevel]||acc>nbBestRates[nbLevel])nbBestRates[nbLevel]=acc;
+  document.getElementById('nbMsg').textContent='完成！本轮正确率 '+acc+'%';
+  document.getElementById('nbStartBtn').textContent='再来一轮';
+  updateNbackBest();
+}
+
+updateNbackBest();
+
+// ── REACTION ──
+const RC_CONFIG={easy:{label:'简单',hold:900},std:{label:'标准',hold:700},fast:{label:'极速',hold:500}};
+let rcDiff='std',rcRunning=false,rcRound=0,rcMiss=0,rcSignal=null,rcStartAt=0,rcHits=[],rcWaitTmr=null,rcWindowTmr=null;
+const rcBestTimes={easy:null,std:218,fast:null};
+
+function clearReactionTimers(){
+  if(rcWaitTmr){clearTimeout(rcWaitTmr);rcWaitTmr=null}
+  if(rcWindowTmr){clearTimeout(rcWindowTmr);rcWindowTmr=null}
+}
+
+function updateReactionBest(){
+  const row=document.getElementById('rcBestRow'),val=document.getElementById('rcBestVal');
+  const best=rcBestTimes[rcDiff];
+  if(best){val.textContent=best+'ms';row.style.display='flex'}
+  else row.style.display='none';
+}
+
+function setReactionZone(state,icon,txt,sub){
+  const zone=document.getElementById('rcZone');
+  zone.className='reaction-zone '+state;
+  document.getElementById('rcZoneIcon').textContent=icon;
+  document.getElementById('rcZoneTxt').textContent=txt;
+  document.getElementById('rcZoneSub').textContent=sub;
+}
+
+function selectReactionDiff(key){
+  if(rcRunning){
+    document.getElementById('rcMsg').textContent='请先完成本轮挑战再切换难度';
+    return;
+  }
+  rcDiff=key;
+  document.querySelectorAll('#rcDiffRow .sdtab').forEach(el=>{
+    el.classList.toggle('on',el.dataset.n===key);
+  });
+  document.getElementById('rcSizeTag').textContent=RC_CONFIG[key].label;
+  document.getElementById('rcLeft').textContent='—';
+  document.getElementById('rcAvg').textContent='—';
+  document.getElementById('rcMiss').textContent='0';
+  document.getElementById('rcMsg').innerHTML='绿色立刻点；<b style="color:var(--coral2)">红色千万别点</b>';
+  document.getElementById('rcStartBtn').textContent='开始挑战';
+  setReactionZone('waiting','👆','点击"开始挑战"','绿色出现立即点击，红色出现要忍住');
+  updateReactionBest();
+}
+
+function startReaction(){
+  clearReactionTimers();
+  rcRunning=true;rcRound=0;rcMiss=0;rcHits=[];rcSignal=null;
+  document.getElementById('rcStartBtn').textContent='重新开始';
+  document.getElementById('rcAvg').textContent='—';
+  document.getElementById('rcMiss').textContent='0';
+  scheduleReactionCue();
+}
+
+function scheduleReactionCue(){
+  if(!rcRunning)return;
+  if(rcRound>=8){finishReaction();return}
+  rcRound++;
+  rcSignal=null;
+  document.getElementById('rcLeft').textContent=(9-rcRound)+'/8';
+  document.getElementById('rcMsg').textContent='准备，等颜色出现';
+  setReactionZone('waiting','…','准备','不要提前点');
+  const delay=650+Math.random()*1150;
+  rcWaitTmr=setTimeout(showReactionCue,delay);
+}
+
+function showReactionCue(){
+  if(!rcRunning)return;
+  rcSignal=Math.random()<.72?'go':'nogo';
+  if(rcSignal==='go'){
+    rcStartAt=performance.now();
+    setReactionZone('go','🟢','现在点击！','越快越好');
+    rcWindowTmr=setTimeout(()=>{rcMiss++;document.getElementById('rcMiss').textContent=rcMiss;scheduleReactionCue()},RC_CONFIG[rcDiff].hold);
+  }else{
+    setReactionZone('nogo','🔴','别点！','忍住就是胜利');
+    rcWindowTmr=setTimeout(()=>{rcSignal=null;scheduleReactionCue()},RC_CONFIG[rcDiff].hold);
+  }
+}
+
+function tapReaction(){
+  if(!rcRunning){
+    document.getElementById('rcMsg').textContent='先点击开始挑战';
+    return;
+  }
+  if(!rcSignal){
+    rcMiss++;
+    document.getElementById('rcMiss').textContent=rcMiss;
+    document.getElementById('rcMsg').textContent='太早了，等绿色出现';
+    const zone=document.getElementById('rcZone');
+    zone.classList.add('flash-wrong');
+    setTimeout(()=>zone.classList.remove('flash-wrong'),360);
+    return;
+  }
+  clearReactionTimers();
+  const zone=document.getElementById('rcZone');
+  if(rcSignal==='go'){
+    const ms=Math.max(80,Math.round(performance.now()-rcStartAt));
+    rcHits.push(ms);
+    const avg=Math.round(rcHits.reduce((a,b)=>a+b,0)/rcHits.length);
+    document.getElementById('rcAvg').textContent=avg+'ms';
+    document.getElementById('rcMsg').textContent='很好，反应 '+ms+'ms';
+    zone.classList.add('flash-correct');
+    setTimeout(()=>zone.classList.remove('flash-correct'),360);
+  }else{
+    rcMiss++;
+    document.getElementById('rcMiss').textContent=rcMiss;
+    document.getElementById('rcMsg').textContent='红色不能点，练的是抑制力';
+    zone.classList.add('flash-wrong');
+    setTimeout(()=>zone.classList.remove('flash-wrong'),360);
+  }
+  rcSignal=null;
+  setTimeout(scheduleReactionCue,520);
+}
+
+function finishReaction(){
+  rcRunning=false;rcSignal=null;clearReactionTimers();
+  const avg=rcHits.length?Math.round(rcHits.reduce((a,b)=>a+b,0)/rcHits.length):0;
+  if(avg&&(!rcBestTimes[rcDiff]||avg<rcBestTimes[rcDiff]))rcBestTimes[rcDiff]=avg;
+  document.getElementById('rcMsg').textContent=avg?'完成！平均反应 '+avg+'ms，失误 '+rcMiss+' 次':'完成！这轮主要练了忍住不乱点';
+  document.getElementById('rcStartBtn').textContent='再来一轮';
+  setReactionZone('waiting','✓','本轮完成','可以再挑战一次');
+  updateReactionBest();
+}
+
+updateReactionBest();
+
+
+
+// ── CHARTS ──
+function buildWCBars(data,labels){
+  data=data||[38,35,31,29,27,26,24];
+  labels=labels||['周一','周二','周三','周四','周五','周六','今天'];
+  const max=Math.max(...data);const wrap=document.getElementById('wcBars');if(!wrap)return;
+  wrap.innerHTML='';
+  data.forEach((v,i)=>{
+    const isToday=i===data.length-1;
+    const d=document.createElement('div');d.className='wc-day';
+    const bw=document.createElement('div');bw.className='wc-bar-wrap';
+    const b=document.createElement('div');b.className='wc-bar';
+    b.style.height=(v/max*100)+'%';
+    b.style.background=isToday?'linear-gradient(180deg,var(--green),var(--green3))':'rgba(167,139,250,.35)';
+    if(isToday)b.style.boxShadow='0 0 8px rgba(61,214,140,.4)';
+    bw.appendChild(b);
+    const l=document.createElement('div');l.className='wc-dlbl';l.textContent=labels[i];
+    d.appendChild(bw);d.appendChild(l);wrap.appendChild(d);
+  });
+}
+function buildMMBars(){
+  const earn=[28,42,62,0];const spend=[0,8,14.5,0];const labels=['第1周','第2周','第3周','第4周'];
+  const max=Math.max(...earn,...spend,1);const wrap=document.getElementById('mmBars');if(!wrap)return;
+  wrap.innerHTML='';
+  earn.forEach((e,i)=>{
+    const d=document.createElement('div');d.className='mm-bar-wrap';
+    const b=document.createElement('div');b.className='mm-bar';b.style.height=(e/max*100)+'%';
+    b.style.background='linear-gradient(180deg,var(--green),var(--green3))';if(e>0)b.style.boxShadow='0 0 6px rgba(61,214,140,.3)';
+    const l=document.createElement('div');l.className='mm-lbl';l.textContent=labels[i];
+    d.appendChild(b);d.appendChild(l);wrap.appendChild(d);
+  });
+}
+buildWCBars();buildMMBars();
+renderTasks();
+</script>
+</body>
+</html>

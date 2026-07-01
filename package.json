@@ -1,0 +1,24 @@
+{
+  "name": "parentbond",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ParentBond React Web/PWA + NestJS + MySQL monorepo.",
+  "workspaces": [
+    "apps/web",
+    "apps/api",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev -w @parentbond/web",
+    "dev:api": "npm run start:dev -w @parentbond/api",
+    "build": "npm run build -w @parentbond/shared && npm run build -w @parentbond/web && npm run build -w @parentbond/api",
+    "typecheck": "npm run typecheck -w @parentbond/web && npm run typecheck -w @parentbond/api",
+    "docker:update": "node scripts/docker-update.mjs",
+    "docker:update:api": "node scripts/docker-update.mjs --service api",
+    "docker:update:web": "node scripts/docker-update.mjs --service web",
+    "docker:logs": "docker compose logs -f --tail=200 api web"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

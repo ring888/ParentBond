@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ParentBond · 零花钱</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700;800;900&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg0:#050B16;--bg1:#0B1730;--bg2:#0F1E3A;
+  --gold:#F5C842;--gold2:#FFE085;--gold3:#8A6800;--gold4:rgba(245,200,66,.1);
+  --green:#3DD68C;--green2:#6EEDB0;--green3:#0A5C38;--green4:rgba(61,214,140,.1);
+  --purple:#A78BFA;--purple2:#C4B5FD;--purple3:#4C1D95;--purple4:rgba(167,139,250,.1);
+  --coral:#FF7B6B;--coral2:#FFA598;--coral4:rgba(255,123,107,.1);
+  --blue:#60A5FA;--blue2:#93C5FD;
+  --text0:#F0EBE3;--text1:#B8B2A8;--text2:#6A6560;--text3:#2A2724;
+  --bd:rgba(255,255,255,.07);--bd2:rgba(255,255,255,.13);--bd3:rgba(255,255,255,.04);
+}
+body{font-family:'Inter',-apple-system,sans-serif;background:#030810;display:flex;justify-content:center;align-items:flex-start;min-height:100vh;padding:20px 12px 40px}
+
+/* ══ SHELL ══ */
+.shell{width:393px;min-height:852px;background:var(--bg1);border-radius:50px;position:relative;overflow:hidden;
+  box-shadow:0 0 0 1px rgba(255,255,255,.09),0 60px 160px rgba(0,0,0,.97),inset 0 1px 0 rgba(255,255,255,.07)}
+canvas.sf{position:absolute;inset:0;pointer-events:none;z-index:0}
+.orb{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0}
+
+.notch{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:126px;height:36px;background:#030710;border-radius:20px;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 10px}
+.n-cam{width:12px;height:12px;background:#0A0F20;border-radius:50%;border:2px solid #0f142a}
+.n-pill{width:56px;height:6px;background:#0A0F20;border-radius:3px}
+.sbar{position:relative;z-index:20;display:flex;justify-content:space-between;align-items:center;padding:14px 24px 0;margin-top:52px}
+.sbar-t{font-size:16px;font-weight:700;color:var(--text0);letter-spacing:-.4px}
+.sbar-r{font-size:11px;color:var(--text0)}
+
+.scroll{position:relative;z-index:10;padding:0 18px 110px;overflow-y:auto;max-height:754px}
+.scroll::-webkit-scrollbar{display:none}
+
+/* bottom nav */
+.bnav{position:absolute;bottom:0;left:0;right:0;height:88px;background:rgba(4,9,20,.97);backdrop-filter:blur(28px);border-top:1px solid rgba(255,255,255,.055);display:flex;align-items:flex-start;padding-top:10px;z-index:200}
+.bni{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 0;position:relative}
+.bni-icon{font-size:21px;line-height:1;transition:transform .2s}
+.bni-lbl{font-size:9px;font-weight:500;color:var(--text2)}
+.bni.on .bni-icon{transform:translateY(-2px)}
+.bni.on .bni-lbl{color:var(--gold);font-weight:700}
+.bni-dot{position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:4px;height:4px;background:var(--gold);border-radius:50%;box-shadow:0 0 8px var(--gold)}
+.fab-w{flex:1;display:flex;justify-content:center;align-items:flex-start}
+.fab{width:54px;height:54px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:24px;margin-top:-10px;cursor:pointer;transition:all .22s;box-shadow:0 5px 20px rgba(0,0,0,.4)}
+.fab:hover{transform:scale(1.07) translateY(-2px)}
+
+/* ══ ANIMATIONS ══ */
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.6)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popIn{0%{transform:scale(.8);opacity:0}70%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(200%)}}
+@keyframes coinFloat{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-8px) rotate(2deg)}}
+@keyframes countUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideInRight{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slideInLeft{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes barGrow{from{width:0}to{width:var(--w)}}
+@keyframes checkBounce{0%{transform:scale(0)}60%{transform:scale(1.3)}100%{transform:scale(1)}}
+@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(245,200,66,.3)}50%{box-shadow:0 0 40px rgba(245,200,66,.6)}}
+@keyframes confetti{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(-40px) rotate(360deg);opacity:0}}
+
+/* ══ PAGE VIEWS ══ */
+.pv{display:none}.pv.on{display:block;animation:fadeUp .3s ease}
+
+/* ══ SHARED ══ */
+.sec-row{display:flex;justify-content:space-between;align-items:center;margin:20px 0 11px}
+.sec-t{font-size:15px;font-weight:700;color:var(--text0);letter-spacing:-.3px}
+.sec-m{font-size:12px;color:var(--purple);font-weight:500;cursor:pointer}
+.back-btn{display:flex;align-items:center;gap:5px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;margin-bottom:20px;width:fit-content;transition:color .2s;padding:4px 0}
+.back-btn:hover{color:var(--text0)}
+.toast{position:absolute;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(18,26,48,.97);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px 18px;font-size:13px;color:var(--text1);z-index:900;white-space:nowrap;backdrop-filter:blur(12px);animation:fadeUp .25s ease;pointer-events:none}
+
+/* ══════════════════════════════════════════
+   CHILD WALLET PAGE
+══════════════════════════════════════════ */
+
+/* ── BALANCE HERO ── */
+.balance-hero{
+  background:linear-gradient(150deg,#1E1402 0%,#2C1E04 40%,#1A1200 100%);
+  border-radius:28px;padding:24px 22px 20px;margin-bottom:14px;
+  position:relative;overflow:hidden;
+  border:1px solid rgba(245,200,66,.13);
+  cursor:default;
+}
+.bh-glow1{position:absolute;top:-50px;right:-50px;width:200px;height:200px;background:radial-gradient(circle,rgba(245,200,66,.18) 0%,transparent 65%);border-radius:50%;pointer-events:none}
+.bh-glow2{position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(255,123,107,.07) 0%,transparent 65%);border-radius:50%;pointer-events:none}
+.bh-shimmer{position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.03) 50%,transparent 70%);animation:shimmer 5s linear infinite;pointer-events:none}
+
+.bh-label{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:7px}
+.bh-label::before{content:'';width:4px;height:4px;background:var(--gold);border-radius:50%}
+.bh-amount-row{display:flex;align-items:flex-end;gap:6px;margin-bottom:6px}
+.bh-currency{font-size:24px;font-weight:700;color:var(--gold);line-height:1;padding-bottom:10px}
+.bh-amount{font-size:64px;font-weight:800;color:var(--text0);letter-spacing:-3px;line-height:1;font-variant-numeric:tabular-nums;animation:countUp .6s ease}
+.bh-cents{font-size:32px;font-weight:300;color:var(--text1);letter-spacing:-1px;padding-bottom:6px}
+.bh-sub{font-size:12px;color:var(--text2);margin-bottom:18px}
+
+.bh-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.bhs{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:10px 8px;text-align:center;transition:all .2s;cursor:pointer}
+.bhs:hover{background:rgba(255,255,255,.08)}
+.bhs-v{font-size:15px;font-weight:700;margin-bottom:2px}
+.bhs-l{font-size:9px;color:var(--text2);font-weight:500}
+
+/* ── PENDING AWARD ── */
+.pending-award{
+  background:linear-gradient(135deg,rgba(245,200,66,.13),rgba(245,200,66,.06));
+  border:1.5px solid rgba(245,200,66,.3);
+  border-radius:22px;padding:18px;margin-bottom:14px;
+  position:relative;overflow:hidden;
+  animation:glow 3s ease-in-out infinite;
+}
+.pa-shimmer{position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(245,200,66,.06),transparent);animation:shimmer 3s linear infinite;pointer-events:none}
+.pa-header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.pa-blink{width:9px;height:9px;background:var(--gold);border-radius:50%;animation:pulse 1.4s ease-in-out infinite;flex-shrink:0}
+.pa-label{font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.05em}
+.pa-body{margin-bottom:14px}
+.pa-reason{font-size:16px;font-weight:700;color:var(--text0);margin-bottom:6px;letter-spacing:-.3px}
+.pa-from{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.pa-evid-chip{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:99px;padding:2px 8px;font-size:10px;color:var(--text1);cursor:pointer;transition:all .2s}
+.pa-evid-chip:hover{background:rgba(255,255,255,.12)}
+.pa-amount-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding:12px 14px;background:rgba(255,255,255,.04);border-radius:14px;border:1px solid rgba(255,255,255,.07)}
+.pa-amt-label{font-size:12px;color:var(--text2)}
+.pa-amt{font-size:30px;font-weight:800;color:var(--green);letter-spacing:-1.5px}
+.pa-btns{display:flex;gap:9px}
+.pa-agree{flex:1;padding:13px;background:linear-gradient(135deg,var(--green3),#0D7A48);border:none;border-radius:14px;font-size:14px;font-weight:700;color:#fff;cursor:pointer;transition:all .22s;font-family:'Inter',sans-serif;box-shadow:0 5px 18px rgba(10,92,56,.45)}
+.pa-agree:hover{transform:translateY(-1px);box-shadow:0 7px 22px rgba(10,92,56,.55)}
+.pa-view-evid{padding:13px 16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:14px;font-size:13px;color:var(--text1);cursor:pointer;transition:all .2s;white-space:nowrap;font-family:'Inter',sans-serif}
+.pa-view-evid:hover{background:rgba(255,255,255,.1)}
+
+/* ── MONTH BAR CHART ── */
+.month-chart{background:var(--bd3);border:1px solid var(--bd);border-radius:20px;padding:16px;margin-bottom:14px}
+.mc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.mc-title{font-size:14px;font-weight:700;color:var(--text0)}
+.mc-sub{font-size:11px;color:var(--text2)}
+.mc-chart-area{display:flex;align-items:flex-end;gap:6px;height:64px;margin-bottom:8px}
+.mc-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%}
+.mc-bar-wrap{flex:1;width:100%;display:flex;align-items:flex-end}
+.mc-bar{width:100%;border-radius:5px 5px 0 0;min-height:3px;position:relative;overflow:visible}
+.mc-bar-tip{position:absolute;top:-17px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:600;white-space:nowrap}
+.mc-bar.earn{background:linear-gradient(180deg,var(--green),var(--green3));box-shadow:0 0 6px rgba(61,214,140,.35)}
+.mc-bar.spend{background:linear-gradient(180deg,var(--coral),#9B2F26);box-shadow:0 0 5px rgba(255,123,107,.3)}
+.mc-lbl{font-size:9px;color:var(--text2);font-weight:500}
+.mc-legend{display:flex;gap:14px;justify-content:center;padding-top:8px;border-top:1px solid var(--bd)}
+.mc-leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text2)}
+.mc-leg-dot{width:8px;height:8px;border-radius:2px}
+
+/* ── LEDGER ── */
+.ledger-tabs{display:flex;background:rgba(255,255,255,.05);border:1px solid var(--bd);border-radius:12px;padding:3px;margin-bottom:14px;gap:3px}
+.lt{flex:1;padding:8px;border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all .2s;color:var(--text2)}
+.lt.on{background:rgba(245,200,66,.18);color:var(--gold2)}
+
+.ledger-list{display:flex;flex-direction:column;gap:8px}
+.ledger-item{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 15px;
+  background:var(--bd3);border:1px solid var(--bd);
+  border-radius:18px;cursor:pointer;transition:all .22s;
+  position:relative;overflow:hidden;
+}
+.ledger-item:hover{border-color:var(--bd2);background:rgba(255,255,255,.06)}
+.ledger-item.pending-item{border-color:rgba(245,200,66,.2);background:rgba(245,200,66,.05)}
+.ledger-item.appeal-item{border-color:rgba(255,123,107,.2);background:rgba(255,123,107,.04)}
+
+/* left accent line */
+.ledger-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:99px 0 0 99px}
+.ledger-item.earn::before{background:var(--green)}
+.ledger-item.spend::before{background:var(--coral)}
+.ledger-item.pending-item::before{background:var(--gold)}
+.ledger-item.appeal-item::before{background:var(--coral)}
+
+.li-icon{width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.li-info{flex:1;min-width:0}
+.li-reason{font-size:13px;font-weight:600;color:var(--text0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+.li-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.li-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:99px}
+.li-date{font-size:10px;color:var(--text2)}
+.li-right{flex-shrink:0;text-align:right}
+.li-amt{font-size:16px;font-weight:800;letter-spacing:-.3px}
+.li-amt-sub{font-size:10px;color:var(--text2);margin-top:1px}
+
+/* ── APPEAL CARD ── */
+.appeal-card{background:rgba(255,123,107,.07);border:1px solid rgba(255,123,107,.2);border-radius:18px;padding:16px;margin-bottom:14px}
+.ac-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.ac-icon{width:32px;height:32px;border-radius:10px;background:rgba(255,123,107,.2);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.ac-title{font-size:13px;font-weight:700;color:var(--coral2)}
+.ac-body{font-size:12px;color:var(--text1);line-height:1.6;margin-bottom:10px}
+.ac-btn{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;background:rgba(255,123,107,.18);border:1px solid rgba(255,123,107,.28);border-radius:10px;font-size:12px;font-weight:600;color:var(--coral2);cursor:pointer;transition:all .2s}
+.ac-btn:hover{background:rgba(255,123,107,.26)}
+
+/* ── SPEND RECORD (child spends virtual coins) ── */
+.spend-btn{width:100%;padding:14px;background:rgba(255,255,255,.05);border:1.5px dashed rgba(255,255,255,.12);border-radius:16px;font-size:13px;font-weight:600;color:var(--text1);cursor:pointer;transition:all .22s;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px}
+.spend-btn:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2)}
+
+/* ══════════════════════════════════════════
+   PARENT SEND MONEY PAGE
+══════════════════════════════════════════ */
+
+/* ── RECIPIENT CARD ── */
+.recipient-card{
+  background:linear-gradient(140deg,#131C38,#0C1428);
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:24px;padding:20px;margin-bottom:14px;
+  display:flex;align-items:center;gap:14px;
+  position:relative;overflow:hidden;
+}
+.rc-glow{position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(245,200,66,.14) 0%,transparent 65%);border-radius:50%;pointer-events:none}
+.rc-av{width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#2C1E04,#4A3410);display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 0 0 2px rgba(245,200,66,.22),0 4px 14px rgba(0,0,0,.4);flex-shrink:0}
+.rc-info{flex:1}
+.rc-name{font-size:18px;font-weight:800;color:var(--text0);letter-spacing:-.4px;margin-bottom:3px}
+.rc-balance{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:5px}
+.rc-balance-val{color:var(--gold);font-weight:600}
+.rc-grade{font-size:11px;color:var(--text2);margin-top:2px}
+
+/* ── TYPE SWITCH (reward / deduct) ── */
+.type-sw{display:flex;gap:9px;margin-bottom:18px}
+.ts-btn{flex:1;padding:14px;border-radius:16px;border:1.5px solid;cursor:pointer;transition:all .22s;text-align:center;position:relative;overflow:hidden}
+.ts-btn-icon{font-size:26px;margin-bottom:6px}
+.ts-btn-label{font-size:14px;font-weight:700;margin-bottom:2px}
+.ts-btn-sub{font-size:11px;opacity:.65}
+.ts-reward{background:rgba(61,214,140,.07);border-color:rgba(61,214,140,.2);color:var(--green2)}
+.ts-reward.on{background:rgba(61,214,140,.18);border-color:rgba(61,214,140,.5);box-shadow:0 0 20px rgba(61,214,140,.15)}
+.ts-deduct{background:rgba(255,123,107,.07);border-color:rgba(255,123,107,.18);color:var(--coral2)}
+.ts-deduct.on{background:rgba(255,123,107,.16);border-color:rgba(255,123,107,.45);box-shadow:0 0 20px rgba(255,123,107,.12)}
+
+/* ── AMOUNT INPUT ── */
+.amount-input-wrap{
+  background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.09);
+  border-radius:20px;padding:20px 22px;margin-bottom:14px;
+  text-align:center;position:relative;overflow:hidden;
+  transition:border-color .3s;
+}
+.amount-input-wrap.reward-mode{border-color:rgba(61,214,140,.3)}
+.amount-input-wrap.deduct-mode{border-color:rgba(255,123,107,.25)}
+.ai-currency{font-size:28px;font-weight:300;color:var(--text2);line-height:1;vertical-align:top;display:inline-block;margin-top:10px}
+.ai-value{font-size:72px;font-weight:800;color:var(--text0);letter-spacing:-4px;line-height:1;display:inline-block;min-width:60px;font-variant-numeric:tabular-nums;transition:color .3s}
+.ai-value.reward-mode{color:var(--green2)}
+.ai-value.deduct-mode{color:var(--coral2)}
+.ai-cursor{display:inline-block;width:3px;height:60px;vertical-align:bottom;margin-bottom:4px;background:currentColor;border-radius:2px;animation:pulse 1s step-end infinite;opacity:.7}
+.ai-hint{font-size:12px;color:var(--text2);margin-top:8px}
+
+/* quick amount chips */
+.quick-amounts{display:flex;gap:7px;justify-content:center;margin-bottom:14px;flex-wrap:wrap}
+.qa-chip{padding:8px 16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:99px;font-size:13px;font-weight:600;color:var(--text1);cursor:pointer;transition:all .2s}
+.qa-chip:hover{background:rgba(255,255,255,.09)}
+.qa-chip.sel-reward{background:rgba(61,214,140,.18);border-color:rgba(61,214,140,.4);color:var(--green2)}
+.qa-chip.sel-deduct{background:rgba(255,123,107,.16);border-color:rgba(255,123,107,.38);color:var(--coral2)}
+
+/* numpad */
+.send-numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.snk{height:58px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-radius:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;user-select:none;font-size:22px;font-weight:600;color:var(--text0)}
+.snk:active{background:rgba(255,255,255,.13);transform:scale(.94)}
+.snk.dot{font-size:16px}
+.snk.del{background:rgba(255,255,255,.04);color:var(--text2);font-size:18px}
+.snk.del:active{background:rgba(255,123,107,.14)}
+.snk.zero{grid-column:auto}
+
+/* ── REASON INPUT ── */
+.reason-section{margin-bottom:14px}
+.rs-label{font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.rs-label::after{content:'必填';font-size:9px;background:rgba(255,123,107,.2);color:var(--coral2);padding:1px 6px;border-radius:99px;font-weight:700;letter-spacing:.03em}
+.reason-presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.rp{padding:7px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;font-size:12px;color:var(--text1);cursor:pointer;transition:all .2s;white-space:nowrap}
+.rp:hover{background:rgba(255,255,255,.08)}
+.rp.sel{background:rgba(167,139,250,.18);border-color:rgba(167,139,250,.35);color:var(--purple2)}
+.reason-inp{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:12px 14px;font-size:14px;color:var(--text0);font-family:'Inter',sans-serif;outline:none;resize:none;transition:border-color .2s;min-height:64px}
+.reason-inp::placeholder{color:var(--text2)}
+.reason-inp:focus{border-color:rgba(167,139,250,.4)}
+
+/* ── EVIDENCE UPLOAD ── */
+.evidence-section{margin-bottom:18px}
+.ev-label{font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px}
+.ev-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ev-item{
+  aspect-ratio:1;border-radius:14px;
+  border:1.5px dashed rgba(255,255,255,.12);
+  background:rgba(255,255,255,.03);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  cursor:pointer;transition:all .22s;
+}
+.ev-item:hover{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.2)}
+.ev-item.filled{border-style:solid;border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.08)}
+.ev-icon{font-size:22px}
+.ev-lbl{font-size:10px;color:var(--text2);font-weight:500}
+.ev-item.filled .ev-lbl{color:var(--purple2)}
+.ev-remove{position:absolute;top:4px;right:4px;width:18px;height:18px;background:rgba(255,123,107,.8);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff}
+
+/* ── CONSENT NOTICE ── */
+.consent-notice{background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.16);border-radius:14px;padding:12px 14px;margin-bottom:18px;display:flex;gap:10px;align-items:flex-start}
+.cn-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.cn-txt{font-size:12px;color:var(--text1);line-height:1.6}
+.cn-txt strong{color:var(--text0)}
+
+/* ── SEND BUTTON ── */
+.send-btn{
+  width:100%;padding:17px;border:none;border-radius:18px;
+  font-size:16px;font-weight:800;cursor:pointer;
+  transition:all .22s;font-family:'Inter',sans-serif;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  margin-bottom:10px;letter-spacing:-.2px;
+}
+.send-btn.reward{background:linear-gradient(135deg,var(--green3),#0D7A48);color:#fff;box-shadow:0 6px 24px rgba(10,92,56,.5)}
+.send-btn.reward:hover{transform:translateY(-1px);box-shadow:0 9px 30px rgba(10,92,56,.6)}
+.send-btn.deduct{background:linear-gradient(135deg,#9B2F26,#C0392B);color:#fff;box-shadow:0 6px 24px rgba(155,47,38,.45)}
+.send-btn.deduct:hover{transform:translateY(-1px);box-shadow:0 9px 28px rgba(155,47,38,.55)}
+.send-btn:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none}
+
+/* ── SUCCESS OVERLAY ── */
+.success-overlay{
+  position:absolute;inset:0;z-index:500;
+  background:linear-gradient(160deg,rgba(5,11,22,.97),rgba(10,18,38,.97));
+  backdrop-filter:blur(20px);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:32px;animation:fadeUp .35s ease;
+}
+.so-coin{font-size:80px;text-align:center;margin-bottom:16px;animation:coinFloat 2s ease-in-out infinite}
+.so-title{font-size:28px;font-weight:800;color:var(--text0);letter-spacing:-.8px;margin-bottom:7px;text-align:center}
+.so-sub{font-size:14px;color:var(--text1);text-align:center;line-height:1.65;margin-bottom:24px}
+.so-card{background:rgba(61,214,140,.1);border:1px solid rgba(61,214,140,.22);border-radius:18px;padding:16px 20px;margin-bottom:24px;width:100%;text-align:center}
+.so-card-label{font-size:11px;font-weight:700;color:var(--green);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.so-card-amt{font-size:40px;font-weight:800;color:var(--green2);letter-spacing:-2px}
+.so-card-to{font-size:13px;color:var(--text2);margin-top:4px}
+.so-btn{width:100%;padding:15px;background:linear-gradient(135deg,var(--gold),#C28B00);border:none;border-radius:16px;font-size:15px;font-weight:700;color:#1A1200;cursor:pointer;font-family:'Inter',sans-serif;transition:all .22s;margin-bottom:8px}
+.so-btn:hover{transform:translateY(-1px)}
+.so-ghost{width:100%;padding:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:16px;font-size:13px;color:var(--text1);cursor:pointer;font-family:'Inter',sans-serif;transition:all .22s}
+.so-ghost:hover{background:rgba(255,255,255,.09)}
+</style>
+</head>
+<body>
+<div class="shell" id="shell">
+  <canvas class="sf" id="sf"></canvas>
+  <div class="orb" style="width:280px;height:280px;background:radial-gradient(circle,rgba(245,200,66,.08) 0%,transparent 70%);top:-80px;right:-60px"></div>
+  <div class="orb" style="width:320px;height:320px;background:radial-gradient(circle,rgba(167,139,250,.06) 0%,transparent 70%);top:340px;left:-100px"></div>
+  <div class="orb" style="width:220px;height:220px;background:radial-gradient(circle,rgba(61,214,140,.06) 0%,transparent 70%);bottom:100px;right:-70px"></div>
+  <div class="notch"><div class="n-cam"></div><div class="n-pill"></div><div class="n-cam"></div></div>
+  <div class="sbar"><div class="sbar-t" id="clockEl">21:14</div><div class="sbar-r">▲▲▲ &nbsp;🔋 92%</div></div>
+
+  <div class="scroll" id="mainScroll">
+
+  <!-- ════════════════════════════════════════
+       CHILD WALLET VIEW
+  ════════════════════════════════════════ -->
+  <div class="pv on" id="pv-child">
+    <!-- Page Header -->
+    <div style="padding:18px 0 4px;display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:5px">6月 · 2026</div>
+        <div style="font-size:26px;font-weight:800;color:var(--text0);letter-spacing:-.7px">我的<span style="color:var(--gold)">零花钱</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+        <div style="width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#2C1E04,#4A3410);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 0 2px rgba(245,200,66,.22)">🦊</div>
+        <!-- view switcher pill -->
+        <div style="display:flex;background:rgba(255,255,255,.05);border:1px solid var(--bd);border-radius:99px;padding:2px;gap:2px">
+          <div style="padding:5px 12px;border-radius:99px;font-size:10px;font-weight:600;cursor:pointer;background:rgba(245,200,66,.18);color:var(--gold2)" onclick="go('pv-child')">孩子</div>
+          <div style="padding:5px 12px;border-radius:99px;font-size:10px;font-weight:600;cursor:pointer;color:var(--text2)" onclick="go('pv-parent')">家长</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Balance Hero -->
+    <div class="balance-hero" style="margin-top:10px">
+      <div class="bh-glow1"></div>
+      <div class="bh-glow2"></div>
+      <div class="bh-shimmer"></div>
+      <div class="bh-label">当前余额</div>
+      <div class="bh-amount-row">
+        <span class="bh-currency">¥</span>
+        <span class="bh-amount" id="balanceAmount">47</span>
+        <span class="bh-cents">.50</span>
+      </div>
+      <div class="bh-sub">上次更新 3 天前 · 零花钱会一直保留</div>
+      <div class="bh-stats">
+        <div class="bhs" onclick="filterLedger('earn')">
+          <div class="bhs-v" style="color:var(--green)">+¥62</div>
+          <div class="bhs-l">本月获得</div>
+        </div>
+        <div class="bhs" onclick="filterLedger('spend')">
+          <div class="bhs-v" style="color:var(--coral)">-¥14.50</div>
+          <div class="bhs-l">本月扣款</div>
+        </div>
+        <div class="bhs">
+          <div class="bhs-v" style="color:var(--gold)">8次</div>
+          <div class="bhs-l">本月获奖</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Award (needs action) -->
+    <div class="pending-award">
+      <div class="pa-shimmer"></div>
+      <div class="pa-header">
+        <div class="pa-blink"></div>
+        <div class="pa-label">🎁 有一笔奖励在等你确认</div>
+      </div>
+      <div class="pa-body">
+        <div class="pa-reason">🏆 数学单元测试满分！</div>
+        <div class="pa-from">
+          爸爸 · 今天 20:30
+          <div class="pa-evid-chip" onclick="showEvidence()">📷 查看试卷照片</div>
+          <div class="pa-evid-chip">🎙️ 查看语音</div>
+        </div>
+      </div>
+      <div class="pa-amount-row">
+        <div class="pa-amt-label">奖励金额</div>
+        <div class="pa-amt">+¥20</div>
+      </div>
+      <div class="pa-btns">
+        <button class="pa-agree" onclick="agreeAward()">✅ 同意，我领了！</button>
+        <button class="pa-view-evid" onclick="showAppeal()">🙋 有异议</button>
+      </div>
+    </div>
+
+    <!-- Month Chart -->
+    <div class="sec-row"><div class="sec-t">本月收支</div><div class="sec-m">年度报告</div></div>
+    <div class="month-chart">
+      <div class="mc-head">
+        <div class="mc-title">收支趋势</div>
+        <div class="mc-sub">6月 · 按周</div>
+      </div>
+      <div class="mc-chart-area" id="mcChartArea"></div>
+      <div class="mc-legend">
+        <div class="mc-leg-item"><div class="mc-leg-dot" style="background:var(--green)"></div>获得</div>
+        <div class="mc-leg-item"><div class="mc-leg-dot" style="background:var(--coral)"></div>扣款</div>
+      </div>
+    </div>
+
+    <!-- Ledger Tabs + List -->
+    <div class="sec-row"><div class="sec-t">账单记录</div><div class="sec-m">筛选</div></div>
+    <div class="ledger-tabs">
+      <div class="lt on" id="lt-all" onclick="filterLedger('all')">全部</div>
+      <div class="lt" id="lt-earn" onclick="filterLedger('earn')">获得</div>
+      <div class="lt" id="lt-spend" onclick="filterLedger('spend')">扣款</div>
+      <div class="lt" id="lt-pending" onclick="filterLedger('pending')">待确认</div>
+    </div>
+
+    <!-- Appeal in progress -->
+    <div class="appeal-card" id="appealCard">
+      <div class="ac-head">
+        <div class="ac-icon">⚠️</div>
+        <div class="ac-title">你有一笔扣款正在申诉</div>
+      </div>
+      <div class="ac-body">爸爸申请扣款 <strong style="color:var(--text0)">¥10</strong>（超时玩游戏），你提交了申诉理由。爸爸正在查看，最终由爸爸裁定并说明原因。</div>
+      <div class="ac-btn" onclick="toast('查看申诉详情')">查看申诉进度 →</div>
+    </div>
+
+    <div class="ledger-list" id="ledgerList"></div>
+
+    <!-- Virtual spend button -->
+    <div style="margin-top:8px">
+      <button class="spend-btn" onclick="toast('记录一次花费（V2.0 功能）')">📝 记录一次消费</button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       PARENT SEND MONEY VIEW
+  ════════════════════════════════════════ -->
+  <div class="pv" id="pv-parent">
+    <!-- Header -->
+    <div style="padding:18px 0 4px;display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:5px">家长操作</div>
+        <div style="font-size:26px;font-weight:800;color:var(--text0);letter-spacing:-.7px">发<span style="color:var(--gold)">零花钱</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+        <div style="width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#1A4E35,#0D2E1E);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 0 2px rgba(61,214,140,.2)">👨</div>
+        <div style="display:flex;background:rgba(255,255,255,.05);border:1px solid var(--bd);border-radius:99px;padding:2px;gap:2px">
+          <div style="padding:5px 12px;border-radius:99px;font-size:10px;font-weight:600;cursor:pointer;color:var(--text2)" onclick="go('pv-child')">孩子</div>
+          <div style="padding:5px 12px;border-radius:99px;font-size:10px;font-weight:600;cursor:pointer;background:rgba(245,200,66,.18);color:var(--gold2)" onclick="go('pv-parent')">家长</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recipient -->
+    <div class="recipient-card" style="margin-top:10px">
+      <div class="rc-glow"></div>
+      <div class="rc-av">🦊</div>
+      <div class="rc-info">
+        <div class="rc-name">小明</div>
+        <div class="rc-grade">四年级 · 孩子账号</div>
+        <div class="rc-balance">当前余额 <span class="rc-balance-val">¥47.50</span></div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:10px;color:var(--text2);margin-bottom:4px">本月获奖</div>
+        <div style="font-size:16px;font-weight:700;color:var(--green)">8次</div>
+      </div>
+    </div>
+
+    <!-- Type Switch -->
+    <div class="type-sw" id="typeSw">
+      <div class="ts-btn ts-reward on" id="ts-reward" onclick="setType('reward')">
+        <div class="ts-btn-icon">🎁</div>
+        <div class="ts-btn-label">发奖励</div>
+        <div class="ts-btn-sub">表扬好行为</div>
+      </div>
+      <div class="ts-btn ts-deduct" id="ts-deduct" onclick="setType('deduct')">
+        <div class="ts-btn-icon">⚠️</div>
+        <div class="ts-btn-label">扣零花钱</div>
+        <div class="ts-btn-sub">需孩子同意</div>
+      </div>
+    </div>
+
+    <!-- Amount Input -->
+    <div class="amount-input-wrap reward-mode" id="amountWrap">
+      <div>
+        <span class="ai-currency" id="amtCurrency">¥</span>
+        <span class="ai-value reward-mode" id="amtDisplay">0</span>
+        <span class="ai-cursor" id="amtCursor"></span>
+      </div>
+      <div class="ai-hint" id="amtHint">点击数字键盘输入金额</div>
+    </div>
+
+    <!-- Quick Amounts -->
+    <div class="quick-amounts" id="quickAmounts">
+      <div class="qa-chip" onclick="setAmt('5')">¥5</div>
+      <div class="qa-chip" onclick="setAmt('10')">¥10</div>
+      <div class="qa-chip" onclick="setAmt('20')">¥20</div>
+      <div class="qa-chip" onclick="setAmt('50')">¥50</div>
+      <div class="qa-chip" onclick="setAmt('100')">¥100</div>
+    </div>
+
+    <!-- Numpad -->
+    <div class="send-numpad">
+      <div class="snk" onclick="numKey('1')">1</div>
+      <div class="snk" onclick="numKey('2')">2</div>
+      <div class="snk" onclick="numKey('3')">3</div>
+      <div class="snk" onclick="numKey('4')">4</div>
+      <div class="snk" onclick="numKey('5')">5</div>
+      <div class="snk" onclick="numKey('6')">6</div>
+      <div class="snk" onclick="numKey('7')">7</div>
+      <div class="snk" onclick="numKey('8')">8</div>
+      <div class="snk" onclick="numKey('9')">9</div>
+      <div class="snk dot" onclick="numKey('.')">·</div>
+      <div class="snk zero" onclick="numKey('0')">0</div>
+      <div class="snk del" onclick="numDel()">⌫</div>
+    </div>
+
+    <!-- Reason -->
+    <div class="reason-section">
+      <div class="rs-label">说明原因</div>
+      <div class="reason-presets" id="reasonPresets"></div>
+      <textarea class="reason-inp" id="reasonInp" placeholder="写下具体原因，孩子会看到…" rows="2"></textarea>
+    </div>
+
+    <!-- Evidence -->
+    <div class="evidence-section">
+      <div class="ev-label">上传证据（可选）</div>
+      <div class="ev-grid">
+        <div class="ev-item filled" onclick="toast('查看已上传照片')">
+          <div class="ev-icon">📷</div>
+          <div class="ev-lbl">试卷照片</div>
+        </div>
+        <div class="ev-item" onclick="toast('上传录音')">
+          <div class="ev-icon">🎙️</div>
+          <div class="ev-lbl">录音</div>
+        </div>
+        <div class="ev-item" onclick="toast('拍摄视频')">
+          <div class="ev-icon">🎬</div>
+          <div class="ev-lbl">视频</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Consent Notice -->
+    <div class="consent-notice">
+      <div class="cn-icon">💡</div>
+      <div class="cn-txt">发送后孩子会收到通知，<strong>需要孩子点击同意</strong>才会生效。孩子有权查看证据并申诉，最终由你裁定。</div>
+    </div>
+
+    <!-- Send Button -->
+    <button class="send-btn reward" id="sendBtn" onclick="sendMoney()">
+      <span id="sendBtnIcon">🎁</span>
+      <span id="sendBtnTxt">发送奖励</span>
+    </button>
+
+    <!-- History quick -->
+    <div class="sec-row" style="margin-top:6px"><div class="sec-t">最近发送记录</div><div class="sec-m">全部账单</div></div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px">
+      <div class="ledger-item earn" style="cursor:default">
+        <div class="li-icon" style="background:rgba(61,214,140,.13);border:1px solid rgba(61,214,140,.2)">⭐</div>
+        <div class="li-info">
+          <div class="li-reason">语文期中考试 95 分</div>
+          <div class="li-meta"><span class="li-badge" style="background:rgba(61,214,140,.14);color:var(--green2)">✓ 已同意</span><span class="li-badge" style="background:rgba(255,255,255,.07);color:var(--text1)">📷 照片</span><span class="li-date">6月8日</span></div>
+        </div>
+        <div class="li-right"><div class="li-amt" style="color:var(--green)">+¥30</div></div>
+      </div>
+      <div class="ledger-item spend" style="cursor:default">
+        <div class="li-icon" style="background:rgba(255,123,107,.12);border:1px solid rgba(255,123,107,.2)">⚠️</div>
+        <div class="li-info">
+          <div class="li-reason">睡前偷偷刷了30分钟手机</div>
+          <div class="li-meta"><span class="li-badge" style="background:rgba(61,214,140,.14);color:var(--green2)">✓ 已同意</span><span class="li-badge" style="background:rgba(255,255,255,.07);color:var(--text1)">🎙️ 录音</span><span class="li-date">6月5日</span></div>
+        </div>
+        <div class="li-right"><div class="li-amt" style="color:var(--coral)">-¥4.50</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUCCESS OVERLAY (shared) -->
+  <div class="success-overlay" id="successOverlay" style="display:none">
+    <div class="so-coin">💰</div>
+    <div class="so-title" id="soTitle">奖励已发送！</div>
+    <div class="so-sub" id="soSub">通知已发给小明<br>等他查看并确认领取</div>
+    <div class="so-card">
+      <div class="so-card-label">奖励金额</div>
+      <div class="so-card-amt" id="soAmt">+¥20</div>
+      <div class="so-card-to" id="soTo">→ 小明零花钱账户</div>
+    </div>
+    <button class="so-btn" onclick="closeSuccess()">好的，回到首页</button>
+    <button class="so-ghost" onclick="sendAnother()">再发一笔</button>
+  </div>
+
+  </div><!-- /scroll -->
+
+  <!-- BOTTOM NAV (child view default) -->
+  <div class="bnav" id="bottomNav">
+    <div class="bni" onclick="toast('首页')"><div class="bni-icon">🏠</div><div class="bni-lbl">首页</div></div>
+    <div class="bni" onclick="toast('任务')"><div class="bni-icon">📋</div><div class="bni-lbl">任务</div></div>
+    <div class="fab-w">
+      <div class="fab" id="mainFab" style="background:linear-gradient(135deg,var(--gold),#C28B00)" onclick="toast('快速记录收支')">💰</div>
+    </div>
+    <div class="bni" onclick="toast('游戏')"><div class="bni-icon">🎯</div><div class="bni-lbl">游戏</div></div>
+    <div class="bni on"><div class="bni-dot"></div><div class="bni-icon">💰</div><div class="bni-lbl">零花钱</div></div>
+  </div>
+</div><!-- /shell -->
+
+<script>
+// ── STARFIELD ──
+const sf=document.getElementById('sf'),ctx=sf.getContext('2d');
+sf.width=393;sf.height=900;
+const stars=Array.from({length:160},()=>({x:Math.random()*393,y:Math.random()*900,r:.1+Math.random()*1.1,a:Math.random(),sp:.002+Math.random()*.009,ph:Math.random()*Math.PI*2}));
+function drawSF(t){ctx.clearRect(0,0,393,900);stars.forEach(s=>{const a=s.a*(.18+.82*Math.sin(t*s.sp+s.ph));ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${a})`;ctx.fill()});requestAnimationFrame(drawSF)}
+requestAnimationFrame(drawSF);
+
+// ── CLOCK ──
+function uc(){const n=new Date();document.getElementById('clockEl').textContent=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')}
+uc();setInterval(uc,15000);
+
+// ── NAV ──
+function go(id){
+  document.querySelectorAll('.pv').forEach(p=>p.classList.remove('on'));
+  const el=document.getElementById(id);
+  if(el){el.classList.add('on');document.getElementById('mainScroll').scrollTop=0}
+}
+
+// ── TOAST ──
+function toast(msg){
+  let t=document.querySelector('.toast');if(t)t.remove();
+  t=document.createElement('div');t.className='toast';t.textContent=msg;
+  document.getElementById('shell').appendChild(t);
+  setTimeout(()=>t&&t.remove(),2200);
+}
+
+// ══════════════════════════════
+// LEDGER DATA
+// ══════════════════════════════
+const LEDGER=[
+  {type:'earn',icon:'⭐',reason:'主动帮妈妈洗碗三天',from:'妈妈',date:'6月15日',amt:15,status:'agreed',evidence:['📹 视频']},
+  {type:'spend',icon:'⚠️',reason:'超时玩游戏 1 小时',from:'爸爸',date:'6月12日',amt:-10,status:'appeal',evidence:['📱 截图']},
+  {type:'earn',icon:'⭐',reason:'语文期中考试 95 分',from:'爸爸',date:'6月8日',amt:30,status:'agreed',evidence:['📷 照片']},
+  {type:'spend',icon:'⚠️',reason:'睡前偷偷刷了30分钟手机',from:'爸爸',date:'6月5日',amt:-4.5,status:'agreed',evidence:['🎙️ 录音']},
+  {type:'earn',icon:'⭐',reason:'连续7天按时完成全部作业',from:'爸爸',date:'6月3日',amt:17,status:'agreed',evidence:[]},
+  {type:'earn',icon:'🎖️',reason:'舒尔特方格打破家庭纪录',from:'爸爸',date:'5月28日',amt:5,status:'agreed',evidence:[]},
+];
+
+let currentFilter='all';
+
+function filterLedger(f){
+  currentFilter=f;
+  ['all','earn','spend','pending'].forEach(k=>{
+    const el=document.getElementById('lt-'+k);
+    if(el)el.classList.toggle('on',k===f);
+  });
+  renderLedger();
+}
+
+function renderLedger(){
+  const list=document.getElementById('ledgerList');
+  let items=LEDGER;
+  if(currentFilter==='earn')items=LEDGER.filter(i=>i.type==='earn');
+  else if(currentFilter==='spend')items=LEDGER.filter(i=>i.type==='spend');
+  else if(currentFilter==='pending')items=LEDGER.filter(i=>i.status==='pending');
+  list.innerHTML='';
+  items.forEach((item,idx)=>{
+    const div=document.createElement('div');
+    div.className='ledger-item '+item.type+(item.status==='appeal'?' appeal-item':'');
+    div.style.animation=`fadeUp .25s ease ${idx*0.04}s both`;
+    const isP=item.amt>0;
+    const badgeColor=item.status==='agreed'?'background:rgba(61,214,140,.14);color:var(--green2)':item.status==='appeal'?'background:rgba(255,123,107,.14);color:var(--coral2)':'background:rgba(245,200,66,.14);color:var(--gold2)';
+    const badgeTxt=item.status==='agreed'?'✓ 已同意':item.status==='appeal'?'申诉中':'待确认';
+    const evChips=item.evidence.map(e=>`<span class="li-badge" style="background:rgba(255,255,255,.07);color:var(--text1)">${e}</span>`).join('');
+    div.innerHTML=`
+      <div class="li-icon" style="background:${isP?'rgba(61,214,140,.12)':'rgba(255,123,107,.1)'};border:1px solid ${isP?'rgba(61,214,140,.2)':'rgba(255,123,107,.18)'}">
+        ${item.icon}
+      </div>
+      <div class="li-info">
+        <div class="li-reason">${item.reason}</div>
+        <div class="li-meta">
+          <span class="li-badge" style="${badgeColor}">${badgeTxt}</span>
+          ${evChips}
+          <span class="li-date">${item.from} · ${item.date}</span>
+        </div>
+      </div>
+      <div class="li-right">
+        <div class="li-amt" style="color:${isP?'var(--green)':'var(--coral)'}">${isP?'+':''}¥${Math.abs(item.amt)}</div>
+      </div>`;
+    div.onclick=()=>toast(`查看 "${item.reason}" 详情`);
+    list.appendChild(div);
+  });
+  if(!items.length){
+    list.innerHTML='<div style="text-align:center;padding:28px;color:var(--text2);font-size:13px">暂无记录</div>';
+  }
+}
+renderLedger();
+
+// ── MONTH CHART ──
+function buildMonthChart(){
+  const data=[
+    {earn:28,spend:0,lbl:'第1周'},
+    {earn:42,spend:8,lbl:'第2周'},
+    {earn:62,spend:14.5,lbl:'第3周'},
+    {earn:20,spend:0,lbl:'本周'},
+  ];
+  const wrap=document.getElementById('mcChartArea');if(!wrap)return;
+  wrap.innerHTML='';
+  const maxVal=Math.max(...data.map(d=>Math.max(d.earn,d.spend)));
+  data.forEach((d,i)=>{
+    const isNow=i===data.length-1;
+    const col=document.createElement('div');
+    col.style.cssText='flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%';
+    const bw=document.createElement('div');bw.style.cssText='flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center;gap:3px';
+    // earn bar
+    if(d.earn>0){
+      const be=document.createElement('div');be.className='mc-bar earn';
+      const h=Math.round(d.earn/maxVal*100);
+      be.style.cssText=`height:${h}%;flex:1;border-radius:4px 4px 0 0;min-height:4px;${isNow?'box-shadow:0 0 10px rgba(61,214,140,.5)':''}`;
+      const tip=document.createElement('div');tip.className='mc-bar-tip';tip.style.color='var(--green)';tip.textContent='¥'+d.earn;
+      be.appendChild(tip);bw.appendChild(be);
+    }
+    // spend bar
+    if(d.spend>0){
+      const bs=document.createElement('div');bs.className='mc-bar spend';
+      const h=Math.round(d.spend/maxVal*100);
+      bs.style.cssText=`height:${h}%;flex:1;border-radius:4px 4px 0 0;min-height:4px`;
+      const tip=document.createElement('div');tip.className='mc-bar-tip';tip.style.color='var(--coral)';tip.textContent='¥'+d.spend;
+      bs.appendChild(tip);bw.appendChild(bs);
+    }
+    col.appendChild(bw);
+    const l=document.createElement('div');l.className='mc-lbl';
+    l.style.cssText=`font-size:9px;color:${isNow?'var(--gold)':'var(--text2)'};font-weight:${isNow?700:500}`;
+    l.textContent=isNow?'本周':d.lbl;col.appendChild(l);
+    wrap.appendChild(col);
+  });
+}
+buildMonthChart();
+
+// ── AWARD AGREE ──
+function agreeAward(){
+  const pa=document.querySelector('.pending-award');
+  if(!pa)return;
+  pa.style.transition='all .4s ease';
+  pa.style.opacity='0';pa.style.transform='translateY(-10px)';
+  setTimeout(()=>{
+    pa.style.display='none';
+    // update balance display
+    document.getElementById('balanceAmount').textContent='67';
+    toast('🎉 ¥20 已到账！余额更新为 ¥67.50');
+  },400);
+}
+
+function showEvidence(){toast('查看试卷照片证据')}
+function showAppeal(){toast('提交申诉 — 说明你的理由')}
+
+// ══════════════════════════════
+// PARENT SEND MONEY
+// ══════════════════════════════
+let sendType='reward';
+let amtStr='0';
+
+const REASON_PRESETS={
+  reward:['考试成绩好','完成作业','帮忙做家务','表现优秀','达成目标'],
+  deduct:['超时玩游戏','没完成作业','说谎','顶嘴不礼貌','违反约定'],
+};
+
+function setType(t){
+  sendType=t;
+  // switch btns
+  document.getElementById('ts-reward').classList.toggle('on',t==='reward');
+  document.getElementById('ts-deduct').classList.toggle('on',t==='deduct');
+  // amount wrap color
+  const wrap=document.getElementById('amountWrap');
+  const disp=document.getElementById('amtDisplay');
+  wrap.className='amount-input-wrap '+(t==='reward'?'reward-mode':'deduct-mode');
+  disp.className='ai-value '+(t==='reward'?'reward-mode':'deduct-mode');
+  // quick amount chips
+  document.querySelectorAll('.qa-chip').forEach(c=>{
+    c.className='qa-chip';
+  });
+  // hint
+  document.getElementById('amtHint').textContent=t==='reward'?'表扬好行为 · 填写奖励金额':'扣款需孩子同意 · 填写扣款金额';
+  // send btn
+  const btn=document.getElementById('sendBtn');
+  btn.className='send-btn '+(t==='reward'?'reward':'deduct');
+  document.getElementById('sendBtnIcon').textContent=t==='reward'?'🎁':'⚠️';
+  document.getElementById('sendBtnTxt').textContent=t==='reward'?'发送奖励':'发起扣款';
+  // reason presets
+  renderReasonPresets();
+  // reset amount
+  amtStr='0';updateAmtDisplay();
+}
+
+function renderReasonPresets(){
+  const wrap=document.getElementById('reasonPresets');
+  wrap.innerHTML='';
+  REASON_PRESETS[sendType].forEach(r=>{
+    const d=document.createElement('div');
+    d.className='rp';d.textContent=r;
+    d.onclick=()=>{
+      document.querySelectorAll('.rp').forEach(x=>x.classList.remove('sel'));
+      d.classList.add('sel');
+      document.getElementById('reasonInp').value=r;
+    };
+    wrap.appendChild(d);
+  });
+}
+renderReasonPresets();
+
+function numKey(k){
+  if(k==='.'&&amtStr.includes('.'))return;
+  if(amtStr==='0'&&k!=='.')amtStr='';
+  if(amtStr.includes('.')&&amtStr.split('.')[1].length>=2)return;
+  amtStr+=k;
+  updateAmtDisplay();
+  // clear chip selection
+  document.querySelectorAll('.qa-chip').forEach(c=>c.className='qa-chip');
+}
+function numDel(){
+  if(amtStr.length>1)amtStr=amtStr.slice(0,-1);
+  else amtStr='0';
+  updateAmtDisplay();
+}
+function setAmt(v){
+  amtStr=v;updateAmtDisplay();
+  document.querySelectorAll('.qa-chip').forEach(c=>c.className='qa-chip');
+  event.target.className='qa-chip '+(sendType==='reward'?'sel-reward':'sel-deduct');
+}
+function updateAmtDisplay(){
+  document.getElementById('amtDisplay').textContent=amtStr||'0';
+}
+
+function sendMoney(){
+  const amt=parseFloat(amtStr)||0;
+  const reason=document.getElementById('reasonInp').value.trim();
+  if(amt<=0){toast('请输入金额');return}
+  if(!reason){toast('请填写原因');return}
+  // show success
+  const isR=sendType==='reward';
+  document.getElementById('soTitle').textContent=isR?'奖励已发送！':'扣款申请已发送！';
+  document.getElementById('soSub').textContent=isR?'通知已发给小明\n等他查看并确认领取':'申请已发给小明\n需要小明同意后生效';
+  document.getElementById('soAmt').textContent=(isR?'+':'-')+'¥'+amtStr;
+  document.getElementById('soAmt').style.color=isR?'var(--green2)':'var(--coral2)';
+  document.getElementById('soTo').textContent=isR?'→ 小明零花钱账户':'← 小明零花钱账户';
+  document.getElementById('successOverlay').style.display='flex';
+}
+function closeSuccess(){
+  document.getElementById('successOverlay').style.display='none';
+  amtStr='0';updateAmtDisplay();
+  document.getElementById('reasonInp').value='';
+  document.querySelectorAll('.rp').forEach(x=>x.classList.remove('sel'));
+  document.querySelectorAll('.qa-chip').forEach(c=>c.className='qa-chip');
+}
+function sendAnother(){
+  closeSuccess();
+  document.getElementById('mainScroll').scrollTop=0;
+}
+</script>
+</body>
+</html>

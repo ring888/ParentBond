@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg0:#060C18;--bg1:#0D1B3E;--bg2:#112048;
+  --gold:#F5C842;--gold2:#FFE085;--gold3:#8A6A00;
+  --green:#3DD68C;--green2:#6EEDB0;--green3:#0A5C38;
+  --purple:#A78BFA;--purple2:#C4B5FD;--purple3:#4C1D95;
+  --coral:#FF7B6B;--blue:#60A5FA;--blue2:#93C5FD;
+  --text0:#F0EBE3;--text1:#B8B2A8;--text2:#6E6860;--text3:#3A3630;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --card:rgba(255,255,255,0.04);
+}
+body{font-family:'Inter',-apple-system,sans-serif;background:#040810;display:flex;justify-content:center;align-items:flex-start;min-height:100vh;padding:20px 12px 40px}
+
+/* ── SHELL ── */
+.shell{width:393px;min-height:852px;background:var(--bg1);border-radius:50px;position:relative;overflow:hidden;
+  box-shadow:0 0 0 1px rgba(255,255,255,0.09),0 50px 140px rgba(0,0,0,0.95),inset 0 1px 0 rgba(255,255,255,0.07)}
+canvas.sf{position:absolute;inset:0;pointer-events:none;z-index:0}
+.orb{position:absolute;border-radius:50%;filter:blur(70px);pointer-events:none;z-index:0}
+.o1{width:260px;height:260px;background:radial-gradient(circle,rgba(245,200,66,.09) 0%,transparent 70%);top:-80px;right:-60px}
+.o2{width:320px;height:320px;background:radial-gradient(circle,rgba(167,139,250,.08) 0%,transparent 70%);top:280px;left:-100px}
+.o3{width:240px;height:240px;background:radial-gradient(circle,rgba(61,214,140,.07) 0%,transparent 70%);top:680px;right:-80px}
+
+/* ── NOTCH ── */
+.notch{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:126px;height:36px;background:#030710;border-radius:20px;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 10px}
+.n-cam{width:12px;height:12px;background:#0A0F20;border-radius:50%;border:2px solid #111}
+.n-pill{width:56px;height:6px;background:#0A0F20;border-radius:3px}
+.sbar{position:relative;z-index:20;display:flex;justify-content:space-between;align-items:center;padding:14px 26px 0;margin-top:52px}
+.sbar-t{font-size:16px;font-weight:700;color:var(--text0);letter-spacing:-.4px}
+.sbar-r{font-size:11px;color:var(--text0)}
+
+/* ── BOTTOM NAV ── */
+.bnav{position:absolute;bottom:0;left:0;right:0;height:88px;background:rgba(6,12,24,.96);backdrop-filter:blur(24px);border-top:1px solid rgba(255,255,255,.06);display:flex;align-items:flex-start;padding-top:10px;z-index:100}
+.bni{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 0;position:relative}
+.bni-icon{font-size:22px;line-height:1;transition:transform .2s}
+.bni-lbl{font-size:9px;font-weight:500;color:var(--text2);transition:color .2s}
+.bni.on .bni-icon{transform:translateY(-2px)}
+.bni.on .bni-lbl{color:var(--gold);font-weight:700}
+.bni-dot{position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:4px;height:4px;background:var(--gold);border-radius:50%;box-shadow:0 0 7px var(--gold)}
+.fab{width:54px;height:54px;background:linear-gradient(135deg,var(--purple),#6D28D9);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 4px 18px rgba(109,40,217,.5);margin-top:-10px;cursor:pointer;transition:all .2s}
+.fab.on{background:linear-gradient(135deg,var(--gold),#D4A500);box-shadow:0 4px 18px rgba(245,200,66,.5)}
+.fab:hover{transform:scale(1.07) translateY(-2px)}
+
+/* ── SCROLL ── */
+.scroll{position:relative;z-index:10;padding:0 18px 110px;overflow-y:auto;max-height:760px}
+.scroll::-webkit-scrollbar{display:none}
+
+/* ── PAGE VIEWS ── */
+.pv{display:none}.pv.on{display:block}
+
+/* ── ANIMS ── */
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.65)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popIn{0%{transform:scale(.85);opacity:0}70%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
+@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(167,139,250,.3)}50%{box-shadow:0 0 40px rgba(167,139,250,.6)}}
+@keyframes blink{50%{opacity:0}}
+@keyframes ringPulse{0%,100%{opacity:1}50%{opacity:.7}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@keyframes completePop{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:scale(1)}}
+@keyframes slideDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+
+/* ════════════════════════════════════
+   TASK PAGE
+════════════════════════════════════ */
+.task-header{padding:18px 0 12px;display:flex;justify-content:space-between;align-items:flex-end}
+.th-left{}
+.th-greeting{font-size:12px;color:var(--text2);margin-bottom:4px}
+.th-title{font-size:28px;font-weight:800;color:var(--text0);letter-spacing:-.8px;line-height:1.1}
+.th-title span{color:var(--gold)}
+.th-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.th-avatar{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--blue));display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 0 2px rgba(167,139,250,.3),0 4px 14px rgba(0,0,0,.4)}
+.th-date{font-size:11px;color:var(--text2);font-weight:500}
+
+/* progress pill */
+.prog-pill{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:99px;padding:8px 16px;margin-bottom:16px}
+.pp-track{flex:1;height:6px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden}
+.pp-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--green),var(--green2));box-shadow:0 0 8px rgba(61,214,140,.4);transition:width .6s cubic-bezier(.4,0,.2,1)}
+.pp-txt{font-size:12px;font-weight:700;color:var(--green);white-space:nowrap}
+
+/* add task bar */
+.add-bar{display:flex;gap:8px;margin-bottom:16px;align-items:center}
+.add-input{flex:1;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:14px;padding:12px 14px;font-size:14px;color:var(--text0);font-family:'Inter',sans-serif;outline:none;transition:border-color .2s}
+.add-input::placeholder{color:var(--text2)}
+.add-input:focus{border-color:rgba(167,139,250,.4);background:rgba(255,255,255,.07)}
+.add-input-subj{width:80px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:14px;padding:12px 10px;font-size:13px;color:var(--text1);font-family:'Inter',sans-serif;outline:none;appearance:none;cursor:pointer}
+.add-input-subj option{background:#0D1B3E}
+.add-btn{width:44px;height:44px;background:linear-gradient(135deg,var(--purple),#6D28D9);border:none;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;flex-shrink:0;box-shadow:0 4px 12px rgba(109,40,217,.4);transition:all .2s}
+.add-btn:hover{transform:scale(1.08)}
+
+/* task list */
+.task-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.ti{display:flex;align-items:center;gap:10px;padding:14px 14px;background:var(--card);border:1px solid var(--border);border-radius:18px;transition:all .25s;position:relative;overflow:hidden}
+.ti.done{opacity:.45}
+.ti.done .ti-name{text-decoration:line-through;color:var(--text2)}
+.ti.editing{border-color:rgba(167,139,250,.4);background:rgba(167,139,250,.06)}
+/* left accent */
+.ti::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:99px 0 0 99px;opacity:0;transition:opacity .2s}
+.ti.done::before{opacity:.5}
+
+/* subject dot + label */
+.ti-subj-col{display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0;width:38px}
+.ti-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.ti-subj-tag{font-size:9px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;text-align:center;line-height:1.2}
+
+/* check circle */
+.ti-check{width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .2s;background:transparent}
+.ti-check.checked{background:var(--green);border-color:var(--green);box-shadow:0 0 10px rgba(61,214,140,.4)}
+.ti-check.checked::after{content:'✓';font-size:12px;color:#fff;font-weight:700}
+
+.ti-body{flex:1;min-width:0}
+.ti-name{font-size:14px;font-weight:500;color:var(--text0);margin-bottom:3px;line-height:1.3}
+.ti-name-input{font-size:14px;font-weight:500;color:var(--text0);background:transparent;border:none;outline:none;width:100%;font-family:'Inter',sans-serif;padding:0}
+.ti-meta{display:flex;align-items:center;gap:8px}
+.ti-dur{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:4px}
+.ti-dur-input{font-size:11px;color:var(--text2);background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:6px;padding:2px 6px;width:64px;outline:none;font-family:'Inter',sans-serif}
+
+/* action icons */
+.ti-actions{display:flex;gap:4px;flex-shrink:0}
+.ti-act-btn{width:30px;height:30px;border-radius:9px;border:none;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;transition:all .15s;color:var(--text1)}
+.ti-act-btn:hover{background:rgba(255,255,255,.12)}
+.ti-act-btn.delete:hover{background:rgba(255,123,107,.2);color:var(--coral)}
+.ti-act-btn.edit-save{background:rgba(61,214,140,.15);color:var(--green)}
+
+/* empty state */
+.empty-state{text-align:center;padding:40px 20px;color:var(--text2)}
+.es-icon{font-size:48px;margin-bottom:12px;opacity:.5}
+.es-t{font-size:16px;font-weight:600;color:var(--text1);margin-bottom:6px}
+.es-s{font-size:13px;line-height:1.5}
+
+/* voice add */
+.voice-add{display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,rgba(167,139,250,.1),rgba(167,139,250,.05));border:1px solid rgba(167,139,250,.2);border-radius:16px;padding:12px 16px;margin-bottom:14px;cursor:pointer;transition:all .2s}
+.voice-add:hover{border-color:rgba(167,139,250,.35)}
+.va-mic{width:40px;height:40px;background:rgba(167,139,250,.18);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;transition:all .3s}
+.va-text{flex:1}
+.va-title{font-size:13px;font-weight:600;color:var(--text0);margin-bottom:2px}
+.va-sub{font-size:11px;color:var(--text2)}
+
+/* start button */
+.start-focus-btn{width:100%;padding:18px;background:linear-gradient(135deg,var(--purple),#5B21B6);border:none;border-radius:20px;font-size:17px;font-weight:800;color:#fff;cursor:pointer;letter-spacing:-.3px;box-shadow:0 8px 28px rgba(91,33,182,.5);transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px}
+.start-focus-btn:hover{transform:translateY(-2px);box-shadow:0 12px 34px rgba(91,33,182,.6)}
+.start-focus-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.start-focus-btn .btn-sub{font-size:12px;font-weight:400;opacity:.75;display:block;margin-top:2px}
+
+/* ════════════════════════════════════
+   FOCUS PAGE
+════════════════════════════════════ */
+/* full-bleed immersive layout */
+.focus-page{min-height:760px;display:flex;flex-direction:column;padding:8px 0 0}
+
+/* mode switch */
+.mode-switch{display:flex;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:14px;padding:3px;margin-bottom:20px}
+.ms-btn{flex:1;padding:9px;border-radius:11px;font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all .2s;color:var(--text2)}
+.ms-btn.on{background:rgba(167,139,250,.25);color:var(--purple2);box-shadow:0 2px 8px rgba(167,139,250,.2)}
+
+/* focus task info */
+.focus-task-info{background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.18);border-radius:16px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px;animation:slideDown .3s ease}
+.fti-dot{width:8px;height:8px;border-radius:50%;background:var(--purple);animation:pulse 1.8s ease-in-out infinite;flex-shrink:0}
+.fti-name{font-size:13px;font-weight:600;color:var(--text0);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fti-subj{font-size:10px;font-weight:700;padding:3px 8px;border-radius:99px;flex-shrink:0}
+
+/* THE BIG RING */
+.ring-stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;padding:20px 0}
+.ring-outer{position:relative;width:280px;height:280px;margin:0 auto}
+.ring-outer svg{transform:rotate(-90deg)}
+/* glow rings */
+.ring-glow{position:absolute;inset:-20px;border-radius:50%;background:transparent;pointer-events:none;transition:all .4s}
+.ring-glow.running{box-shadow:0 0 60px rgba(167,139,250,.2),0 0 120px rgba(167,139,250,.1),inset 0 0 60px rgba(167,139,250,.05)}
+.ring-glow.break{box-shadow:0 0 60px rgba(61,214,140,.2),0 0 120px rgba(61,214,140,.1),inset 0 0 60px rgba(61,214,140,.05)}
+.ring-glow.paused{box-shadow:0 0 40px rgba(245,200,66,.15)}
+.ring-glow.idle{box-shadow:none}
+
+.ring-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0}
+.ring-mode-label{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;opacity:.7}
+.ring-time{font-size:72px;font-weight:200;color:var(--text0);letter-spacing:-4px;line-height:1;font-variant-numeric:tabular-nums}
+.ring-colon{animation:blink 1s step-end infinite}
+.ring-running .ring-colon{animation:blink 1s step-end infinite}
+.ring-paused .ring-colon{animation:none;opacity:.4}
+.ring-sub{font-size:13px;color:var(--text2);margin-top:6px;letter-spacing:.05em}
+.ring-pct{font-size:14px;font-weight:700;margin-top:2px}
+
+/* tomato progress */
+.tomato-track{display:flex;justify-content:center;gap:10px;margin-bottom:24px}
+.tom{width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.1);transition:all .3s}
+.tom.done{background:var(--purple);border-color:rgba(167,139,250,.6);box-shadow:0 0 10px rgba(167,139,250,.5)}
+.tom.active{background:var(--gold);border-color:rgba(245,200,66,.6);box-shadow:0 0 10px rgba(245,200,66,.5);animation:glow 1.5s ease-in-out infinite}
+.tom.break{background:var(--green);border-color:rgba(61,214,140,.6);box-shadow:0 0 10px rgba(61,214,140,.4)}
+
+/* big action row */
+.focus-actions{display:flex;gap:10px;margin-bottom:14px}
+.fa-btn{flex:1;padding:16px;border-radius:18px;border:none;cursor:pointer;font-size:15px;font-weight:700;transition:all .2s;font-family:'Inter',sans-serif}
+.fa-pause{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:var(--text1)}
+.fa-pause:hover{background:rgba(255,255,255,.14)}
+.fa-start{background:linear-gradient(135deg,var(--purple),#5B21B6);color:#fff;box-shadow:0 6px 22px rgba(91,33,182,.45);flex:2}
+.fa-start:hover{transform:translateY(-1px);box-shadow:0 8px 28px rgba(91,33,182,.55)}
+.fa-stop{background:rgba(255,123,107,.15);border:1px solid rgba(255,123,107,.25);color:var(--coral)}
+.fa-stop:hover{background:rgba(255,123,107,.25)}
+.fa-green{background:linear-gradient(135deg,var(--green3),#0D7A48);color:#fff;box-shadow:0 6px 22px rgba(10,92,56,.45);flex:2}
+
+/* stats row */
+.focus-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.fs-cell{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:14px;padding:13px;text-align:center}
+.fs-val{font-size:20px;font-weight:800;letter-spacing:-.5px;margin-bottom:2px}
+.fs-lbl{font-size:10px;color:var(--text2)}
+
+/* dad sync mini */
+.dad-sync-mini{background:rgba(61,214,140,.06);border:1px solid rgba(61,214,140,.14);border-radius:16px;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.dsm-left{display:flex;align-items:center;gap:10px}
+.dsm-av{font-size:20px}
+.dsm-info{}
+.dsm-name{font-size:13px;font-weight:600;color:var(--text0)}
+.dsm-sub{font-size:11px;color:var(--text2);margin-top:1px}
+.dsm-right{display:flex;align-items:center;gap:6px}
+.live-dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 1.8s ease-in-out infinite}
+.live-txt{font-size:11px;font-weight:600;color:var(--green)}
+.dsm-time{font-size:16px;font-weight:700;color:var(--text0);letter-spacing:-1px;margin-left:10px}
+
+/* ── COMPLETION OVERLAY ── */
+.complete-overlay{position:absolute;inset:0;background:rgba(6,12,24,.92);z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;backdrop-filter:blur(16px);animation:fadeUp .35s ease}
+.co-icon{font-size:80px;margin-bottom:16px;animation:popIn .5s ease}
+.co-title{font-size:28px;font-weight:800;color:var(--text0);letter-spacing:-.8px;margin-bottom:8px;text-align:center}
+.co-sub{font-size:14px;color:var(--text1);text-align:center;line-height:1.6;margin-bottom:28px}
+.co-task{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.22);border-radius:16px;padding:14px 18px;margin-bottom:28px;width:100%;text-align:center}
+.co-task-name{font-size:15px;font-weight:600;color:var(--text0);margin-bottom:3px}
+.co-task-sub{font-size:12px;color:var(--text2)}
+.co-btns{display:flex;flex-direction:column;gap:10px;width:100%}
+.co-done{padding:17px;background:linear-gradient(135deg,var(--green3),#0D7A48);border:none;border-radius:18px;font-size:16px;font-weight:800;color:#fff;cursor:pointer;box-shadow:0 8px 24px rgba(10,92,56,.5);transition:all .2s;font-family:'Inter',sans-serif}
+.co-done:hover{transform:translateY(-1px);box-shadow:0 10px 30px rgba(10,92,56,.6)}
+.co-more{padding:15px;background:rgba(167,139,250,.18);border:1px solid rgba(167,139,250,.3);border-radius:18px;font-size:15px;font-weight:600;color:var(--purple2);cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif}
+.co-more:hover{background:rgba(167,139,250,.26)}
+.co-skip{padding:10px;background:transparent;border:none;font-size:13px;color:var(--text2);cursor:pointer;font-family:'Inter',sans-serif;margin-top:2px}
+
+/* break overlay */
+.break-overlay{position:absolute;inset:0;background:rgba(6,18,12,.92);z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;backdrop-filter:blur(16px);animation:fadeUp .35s ease}
+.bo-icon{font-size:72px;margin-bottom:16px}
+.bo-title{font-size:26px;font-weight:800;color:var(--text0);letter-spacing:-.6px;margin-bottom:8px;text-align:center}
+.bo-sub{font-size:14px;color:var(--text1);text-align:center;line-height:1.6;margin-bottom:28px}
+.bo-time{font-size:64px;font-weight:200;color:var(--green);letter-spacing:-3px;margin-bottom:20px;font-variant-numeric:tabular-nums}
+.bo-skip{padding:16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:18px;font-size:15px;font-weight:600;color:var(--text1);cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;width:100%;text-align:center}
+.bo-skip:hover{background:rgba(255,255,255,.14)}
+
+/* misc */
+.sec-row{display:flex;justify-content:space-between;align-items:center;margin:20px 0 11px}
+.sec-t{font-size:16px;font-weight:700;color:var(--text0);letter-spacing:-.3px}
+.sec-m{font-size:12px;color:var(--purple);font-weight:500;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="shell" id="shell">
+  <canvas class="sf" id="sf"></canvas>
+  <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+  <div class="notch"><div class="n-cam"></div><div class="n-pill"></div><div class="n-cam"></div></div>
+  <div class="sbar"><div class="sbar-t" id="clockDisplay">21:14</div><div class="sbar-r">▲▲▲ 🔋92%</div></div>
+
+  <div class="scroll" id="mainScroll">
+
+    <!-- ══════════ TASK PAGE ══════════ -->
+    <div class="pv on" id="pv-tasks">
+      <div class="task-header">
+        <div class="th-left">
+          <div class="th-greeting">晚上好，准备开始了吗 ✨</div>
+          <div class="th-title">今日任务<span> 清单</span></div>
+        </div>
+        <div class="th-right">
+          <div class="th-avatar">🦊</div>
+          <div class="th-date" id="todayDate"></div>
+        </div>
+      </div>
+
+      <!-- progress pill -->
+      <div class="prog-pill">
+        <div class="pp-track"><div class="pp-fill" id="ppFill" style="width:0%"></div></div>
+        <div class="pp-txt" id="ppTxt">0 / 0 完成</div>
+      </div>
+
+      <!-- voice input -->
+      <div class="voice-add" id="voiceAddBtn" onclick="demoVoice()">
+        <div class="va-mic" id="vaMic">🎙️</div>
+        <div class="va-text">
+          <div class="va-title" id="vaTitle">语音添加任务</div>
+          <div class="va-sub" id="vaSub">说出作业内容，AI 自动整理</div>
+        </div>
+        <div style="font-size:18px;color:var(--text2)">›</div>
+      </div>
+
+      <!-- add task row -->
+      <div class="add-bar">
+        <select class="add-input-subj" id="addSubj">
+          <option value="math">数学</option>
+          <option value="cn">语文</option>
+          <option value="en">英语</option>
+          <option value="sci">科学</option>
+          <option value="oth">其他</option>
+        </select>
+        <input class="add-input" id="addInput" placeholder="添加一项任务…" onkeydown="if(event.key==='Enter')addTask()"/>
+        <button class="add-btn" onclick="addTask()">＋</button>
+      </div>
+
+      <!-- task list -->
+      <div class="task-list" id="taskList"></div>
+
+      <!-- empty state (shown when no tasks) -->
+      <div class="empty-state" id="emptyState" style="display:none">
+        <div class="es-icon">📋</div>
+        <div class="es-t">还没有任务</div>
+        <div class="es-s">用上方输入框或语音<br>添加今天的作业吧</div>
+      </div>
+
+      <!-- START FOCUS BUTTON -->
+      <button class="start-focus-btn" id="startFocusBtn" onclick="startFocusFromTasks()" disabled>
+        <span>⏱</span>
+        <span>
+          开始专注作业
+          <span class="btn-sub" id="sfBtnSub">请先添加任务</span>
+        </span>
+      </button>
+      <div style="text-align:center;font-size:11px;color:var(--text2);margin-bottom:8px">完成每一项后会引导你确认完成 · 任务自动打勾</div>
+    </div>
+
+    <!-- ══════════ FOCUS PAGE ══════════ -->
+    <div class="pv" id="pv-focus">
+      <div class="focus-page">
+        <!-- mode switch -->
+        <div style="padding:14px 0 0">
+          <div class="mode-switch" id="modeSwitch">
+            <div class="ms-btn on" id="ms-task" onclick="switchMode('task')">📋 任务专注</div>
+            <div class="ms-btn" id="ms-free" onclick="switchMode('free')">🍅 自由番茄</div>
+          </div>
+        </div>
+
+        <!-- current task chip (task mode) -->
+        <div class="focus-task-info" id="focusTaskInfo">
+          <div class="fti-dot"></div>
+          <div class="fti-name" id="ftiName">— 选择任务后开始 —</div>
+          <div class="fti-subj" id="ftiSubj" style="background:rgba(167,139,250,.15);color:var(--purple2)">—</div>
+        </div>
+
+        <!-- BIG RING -->
+        <div class="ring-stage">
+          <div class="ring-outer" id="ringOuter">
+            <div class="ring-glow idle" id="ringGlow"></div>
+            <svg width="280" height="280" viewBox="0 0 280 280" id="ringSvg">
+              <defs>
+                <linearGradient id="rg1" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color:#A78BFA"/>
+                  <stop offset="100%" style="stop-color:#5B21B6"/>
+                </linearGradient>
+                <linearGradient id="rg2" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color:#3DD68C"/>
+                  <stop offset="100%" style="stop-color:#0A5C38"/>
+                </linearGradient>
+              </defs>
+              <!-- track -->
+              <circle fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="10" cx="140" cy="140" r="125"/>
+              <!-- subtle tick marks -->
+              <circle fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1" cx="140" cy="140" r="112"/>
+              <!-- progress ring -->
+              <circle id="progressRing" fill="none" stroke="url(#rg1)" stroke-width="10" stroke-linecap="round"
+                cx="140" cy="140" r="125"
+                stroke-dasharray="785" stroke-dashoffset="785"
+                style="transition:stroke-dashoffset .4s linear;filter:drop-shadow(0 0 8px rgba(167,139,250,.5))"/>
+            </svg>
+            <div class="ring-inner" id="ringInner">
+              <div class="ring-mode-label" id="ringModeLabel" style="color:var(--purple)">专注时间</div>
+              <div class="ring-time" id="ringTime"><span id="ringM">25</span><span class="ring-colon" id="ringColon">:</span><span id="ringS">00</span></div>
+              <div class="ring-sub" id="ringSub">点击开始</div>
+              <div class="ring-pct" id="ringPct" style="color:var(--purple)"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- tomato track -->
+        <div class="tomato-track" id="tomatoTrack"></div>
+
+        <!-- actions -->
+        <div class="focus-actions" id="focusActions">
+          <button class="fa-btn fa-stop" id="btnStop" onclick="stopFocus()" style="display:none">✕ 放弃</button>
+          <button class="fa-btn fa-start" id="btnMain" onclick="mainAction()">▶  开始专注</button>
+          <button class="fa-btn fa-pause" id="btnPause" onclick="pauseFocus()" style="display:none">⏸ 暂停</button>
+        </div>
+
+        <!-- stats -->
+        <div class="focus-stats">
+          <div class="fs-cell"><div class="fs-val" id="fsTomatoes" style="color:var(--purple)">0</div><div class="fs-lbl">今日番茄</div></div>
+          <div class="fs-cell"><div class="fs-val" id="fsMins" style="color:var(--green)">0m</div><div class="fs-lbl">专注时长</div></div>
+          <div class="fs-cell"><div class="fs-val" id="fsStreak" style="color:var(--gold)">7🔥</div><div class="fs-lbl">连续天数</div></div>
+        </div>
+
+        <!-- dad sync -->
+        <div class="dad-sync-mini">
+          <div class="dsm-left">
+            <div class="dsm-av">👨</div>
+            <div class="dsm-info">
+              <div class="dsm-name">爸爸也在专注</div>
+              <div class="dsm-sub">工作中 · 今晚对决谁更专注</div>
+            </div>
+          </div>
+          <div class="dsm-right">
+            <div class="live-dot"></div>
+            <div class="live-txt">32m</div>
+            <div class="dsm-time" id="dadTimer">32:18</div>
+          </div>
+        </div>
+
+        <!-- task mode: task selector -->
+        <div id="taskSelector" style="margin-bottom:14px">
+          <div class="sec-row" style="margin-top:0"><div class="sec-t">选择要专注的任务</div></div>
+          <div id="focusTaskList"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /scroll -->
+
+  <!-- BOTTOM NAV -->
+  <div class="bnav">
+    <div class="bni on" id="bni-tasks" onclick="goPage('tasks')">
+      <div class="bni-dot"></div>
+      <div class="bni-icon">📋</div><div class="bni-lbl">任务</div>
+    </div>
+    <div class="bni" id="bni-games" onclick="goPage('games',true)">
+      <div class="bni-icon">🎯</div><div class="bni-lbl">游戏</div>
+    </div>
+    <div style="flex:1;display:flex;justify-content:center;align-items:flex-start;padding-top:0">
+      <div class="fab" id="focusFab" onclick="goPage('focus')">⏱️</div>
+    </div>
+    <div class="bni" id="bni-wallet" onclick="goPage('wallet',true)">
+      <div class="bni-icon">💰</div><div class="bni-lbl">零花钱</div>
+    </div>
+    <div class="bni" id="bni-memory" onclick="goPage('memory',true)">
+      <div class="bni-icon">📓</div><div class="bni-lbl">时光机</div>
+    </div>
+  </div>
+
+  <!-- COMPLETION OVERLAY -->
+  <div class="complete-overlay" id="completeOverlay" style="display:none">
+    <div class="co-icon">🎉</div>
+    <div class="co-title">番茄完成！</div>
+    <div class="co-sub">25 分钟专注结束<br>你刚才在做这项任务：</div>
+    <div class="co-task">
+      <div class="co-task-name" id="coTaskName">—</div>
+      <div class="co-task-sub" id="coTaskSub">—</div>
+    </div>
+    <div class="co-btns">
+      <button class="co-done" onclick="confirmTaskDone()">✅ 这项任务完成了！</button>
+      <button class="co-more" onclick="continueTask()">⏱ 还没完，继续专注</button>
+      <button class="co-skip" onclick="skipConfirm()">跳过，进入休息</button>
+    </div>
+  </div>
+
+  <!-- BREAK OVERLAY -->
+  <div class="break-overlay" id="breakOverlay" style="display:none">
+    <div class="bo-icon">☕</div>
+    <div class="bo-title">休息一下！</div>
+    <div class="bo-sub">你已经完成了一个番茄<br>站起来动一动，喝点水</div>
+    <div class="bo-time" id="breakTime">05:00</div>
+    <div class="bo-skip" onclick="skipBreak()">跳过休息，继续下一个番茄</div>
+  </div>
+</div>
+
+<script>
+// ── STARFIELD ──
+const sf=document.getElementById('sf'),ctx=sf.getContext('2d');
+sf.width=393;sf.height=900;
+const stars=Array.from({length:140},()=>({x:Math.random()*393,y:Math.random()*900,r:.2+Math.random()*1.1,a:Math.random(),sp:.003+Math.random()*.008,ph:Math.random()*Math.PI*2}));
+function drawSF(t){ctx.clearRect(0,0,393,900);stars.forEach(s=>{const a=s.a*(.3+.7*Math.sin(t*s.sp+s.ph));ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${a})`;ctx.fill()});requestAnimationFrame(drawSF)}
+requestAnimationFrame(drawSF);
+
+// ── CLOCK ──
+function updateClock(){const n=new Date();const h=String(n.getHours()).padStart(2,'0'),m=String(n.getMinutes()).padStart(2,'0');document.getElementById('clockDisplay').textContent=h+':'+m}
+updateClock();setInterval(updateClock,10000);
+// date
+const d=new Date();const days=['周日','周一','周二','周三','周四','周五','周六'];
+document.getElementById('todayDate').textContent=days[d.getDay()]+' '+(d.getMonth()+1)+'/'+(d.getDate());
+
+// ── PAGE NAV ──
+function goPage(id,toast=false){
+  ['tasks','focus'].forEach(p=>{
+    const el=document.getElementById('pv-'+p);
+    if(el)el.classList.toggle('on',p===id);
+  });
+  ['tasks','games','wallet','memory'].forEach(k=>{
+    const b=document.getElementById('bni-'+k);
+    if(!b)return;
+    b.classList.remove('on');
+    const d=b.querySelector('.bni-dot');if(d)d.remove();
+  });
+  const fab=document.getElementById('focusFab');
+  if(id==='focus'){fab.classList.add('on')}else{fab.classList.remove('on')}
+  const bni=document.getElementById('bni-'+id);
+  if(bni){bni.classList.add('on');const dot=document.createElement('div');dot.className='bni-dot';bni.insertBefore(dot,bni.firstChild)}
+  document.getElementById('mainScroll').scrollTop=0;
+  if(id==='focus')renderFocusTaskList();
+  if(toast)showToast('该功能在完整版中查看');
+}
+
+// ── TOAST ──
+function showToast(msg){
+  let t=document.querySelector('.toast-el');if(t)t.remove();
+  t=document.createElement('div');
+  t.className='toast-el';
+  t.style.cssText='position:absolute;bottom:110px;left:50%;transform:translateX(-50%);background:rgba(30,30,50,.95);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px 18px;font-size:13px;color:var(--text1);z-index:500;white-space:nowrap;backdrop-filter:blur(12px);animation:fadeUp .25s ease';
+  t.textContent=msg;
+  document.getElementById('shell').appendChild(t);
+  setTimeout(()=>t.remove(),2200);
+}
+
+// ══════════════════════════════════════
+// TASK DATA & RENDERING
+// ══════════════════════════════════════
+const SUBJ_META={
+  math:{label:'数学',color:'#A78BFA',bg:'rgba(167,139,250,.16)',border:'rgba(167,139,250,.22)'},
+  cn:  {label:'语文',color:'#FFD060',bg:'rgba(255,200,60,.14)',border:'rgba(255,200,60,.22)'},
+  en:  {label:'英语',color:'#6EEDB0',bg:'rgba(61,214,140,.14)',border:'rgba(61,214,140,.22)'},
+  sci: {label:'科学',color:'#93C5FD',bg:'rgba(96,165,250,.14)',border:'rgba(96,165,250,.22)'},
+  oth: {label:'其他',color:'#B8B2A8',bg:'rgba(184,178,168,.1)', border:'rgba(184,178,168,.16)'},
+};
+
+let tasks=[
+  {id:1,subj:'math',name:'练习册第5页，15道计算题',dur:20,done:false,editing:false},
+  {id:2,subj:'en',  name:'背诵单词 Unit 7，共20个',dur:15,done:false,editing:false},
+  {id:3,subj:'cn',  name:'日记一篇，不少于200字',  dur:40,done:false,editing:false},
+  {id:4,subj:'oth', name:'课外书阅读30分钟',       dur:30,done:true, editing:false},
+];
+let nextId=5;
+let selectedFocusTaskId = tasks.find(t=>!t.done)?.id ?? -1;
+
+function saveTasks(){/* In real app: persist */}
+
+function renderTasks(){
+  const list=document.getElementById('taskList');
+  const empty=document.getElementById('emptyState');
+  const btn=document.getElementById('startFocusBtn');
+  const sub=document.getElementById('sfBtnSub');
+  list.innerHTML='';
+
+  if(tasks.length===0){empty.style.display='block';btn.disabled=true;sub.textContent='请先添加任务';updateProgress();return}
+  empty.style.display='none';
+
+  const pending=tasks.filter(t=>!t.done);
+  btn.disabled=pending.length===0;
+  sub.textContent=pending.length===0?'所有任务已完成 🎉':`${pending.length} 项待完成`;
+
+  tasks.forEach(t=>{
+    const m=SUBJ_META[t.subj]||SUBJ_META.oth;
+    const div=document.createElement('div');
+    div.className='ti'+(t.done?' done':'')+(t.editing?' editing':'');
+    div.id='ti-'+t.id;
+    div.style.setProperty('--accent',m.color);
+    if(t.done)div.style.setProperty('--before-bg',m.color);
+
+    if(t.editing){
+      div.innerHTML=`
+        <div class="ti-subj-col">
+          <div class="ti-dot" style="background:${m.color}"></div>
+          <div class="ti-subj-tag" style="color:${m.color}">${m.label}</div>
+        </div>
+        <div class="ti-check ${t.done?'checked':''}" onclick="toggleDone(${t.id})"></div>
+        <div class="ti-body">
+          <input class="ti-name-input" id="edit-name-${t.id}" value="${t.name}" />
+          <div class="ti-meta">
+            <input class="ti-dur-input" id="edit-dur-${t.id}" type="number" value="${t.dur}" min="1" max="180" />
+            <span style="font-size:11px;color:var(--text2)">分钟</span>
+          </div>
+        </div>
+        <div class="ti-actions">
+          <button class="ti-act-btn edit-save" onclick="saveEdit(${t.id})">✓</button>
+          <button class="ti-act-btn delete" onclick="deleteTask(${t.id})">🗑</button>
+        </div>`;
+    } else {
+      div.innerHTML=`
+        <div class="ti-subj-col">
+          <div class="ti-dot" style="background:${m.color}"></div>
+          <div class="ti-subj-tag" style="color:${m.color}">${m.label}</div>
+        </div>
+        <div class="ti-check ${t.done?'checked':''}" onclick="toggleDone(${t.id})"></div>
+        <div class="ti-body" onclick="startEditInline(${t.id})">
+          <div class="ti-name">${t.name}</div>
+          <div class="ti-meta">
+            <div class="ti-dur">⏱ ${t.dur} 分钟</div>
+            ${t.done?'<span style="font-size:11px;color:var(--green);font-weight:600">已完成</span>':''}
+          </div>
+        </div>
+        <div class="ti-actions">
+          <button class="ti-act-btn" onclick="startEditInline(${t.id})">✏️</button>
+          <button class="ti-act-btn delete" onclick="deleteTask(${t.id})">🗑</button>
+        </div>`;
+    }
+    list.appendChild(div);
+  });
+  updateProgress();
+}
+
+function updateProgress(){
+  const done=tasks.filter(t=>t.done).length,total=tasks.length;
+  const pct=total?done/total*100:0;
+  document.getElementById('ppFill').style.width=pct+'%';
+  document.getElementById('ppTxt').textContent=total?`${done} / ${total} 完成`:'0 / 0 完成';
+}
+
+function addTask(){
+  const inp=document.getElementById('addInput');
+  const name=inp.value.trim();if(!name)return;
+  const subj=document.getElementById('addSubj').value;
+  tasks.push({id:nextId++,subj,name,dur:25,done:false,editing:false});
+  inp.value='';
+  if(selectedFocusTaskId===-1)selectedFocusTaskId=tasks[tasks.length-1].id;
+  renderTasks();saveTasks();
+}
+
+function deleteTask(id){
+  tasks=tasks.filter(t=>t.id!==id);
+  if(selectedFocusTaskId===id)selectedFocusTaskId=tasks.find(t=>!t.done)?.id??-1;
+  renderTasks();saveTasks();
+}
+
+function toggleDone(id){
+  const t=tasks.find(t=>t.id===id);if(!t)return;
+  t.done=!t.done;
+  renderTasks();saveTasks();
+}
+
+function startEditInline(id){
+  tasks.forEach(t=>{if(t.id!==id)t.editing=false});
+  const t=tasks.find(t=>t.id===id);if(!t||t.done)return;
+  t.editing=!t.editing;renderTasks();
+  if(t.editing){const inp=document.getElementById('edit-name-'+id);if(inp)inp.focus()}
+}
+
+function saveEdit(id){
+  const t=tasks.find(t=>t.id===id);if(!t)return;
+  const nameEl=document.getElementById('edit-name-'+id);
+  const durEl=document.getElementById('edit-dur-'+id);
+  if(nameEl)t.name=nameEl.value.trim()||t.name;
+  if(durEl)t.dur=Math.max(1,parseInt(durEl.value)||25);
+  t.editing=false;renderTasks();saveTasks();
+}
+
+renderTasks();
+
+// ── VOICE DEMO ──
+let vs=0;
+const vstates=[
+  ['语音添加任务','说出作业内容，AI 自动整理','🎙️','rgba(167,139,250,.18)'],
+  ['正在聆听…','说出今天的作业内容','🔴','rgba(255,107,107,.18)'],
+  ['AI 整理中…','识别到：数学、语文、英语','✨','rgba(245,200,66,.18)'],
+  ['语音添加任务','说出作业内容，AI 自动整理','🎙️','rgba(167,139,250,.18)'],
+];
+function demoVoice(){
+  vs=(vs+1)%vstates.length;const s=vstates[vs];
+  document.getElementById('vaTitle').textContent=s[0];
+  document.getElementById('vaSub').textContent=s[1];
+  document.getElementById('vaMic').textContent=s[2];
+  document.getElementById('vaMic').style.background=s[3];
+}
+
+function startFocusFromTasks(){
+  const pending=tasks.filter(t=>!t.done);if(!pending.length)return;
+  selectedFocusTaskId=pending[0].id;
+  goPage('focus');
+  loadTaskFocus(selectedFocusTaskId);
+}
+
+// ══════════════════════════════════════
+// FOCUS ENGINE
+// ══════════════════════════════════════
+const FOCUS_SECS=25*60, BREAK_SECS=5*60;
+let focusState='idle'; // idle | running | paused | break
+let focusMode='task';  // task | free
+let focusSecsLeft=FOCUS_SECS;
+let breakSecsLeft=BREAK_SECS;
+let focusInterval=null;
+let tomatoesDone=0;
+let totalFocusMins=0;
+let activeTaskId=-1;
+let dadSecs=32*60+18;
+
+// dad timer (just for display)
+setInterval(()=>{dadSecs++;const m=Math.floor(dadSecs/60),s=dadSecs%60;document.getElementById('dadTimer').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')},1000);
+
+function switchMode(m){
+  focusMode=m;
+  ['task','free'].forEach(k=>{document.getElementById('ms-'+k).classList.toggle('on',k===m)});
+  document.getElementById('taskSelector').style.display=m==='task'?'block':'none';
+  document.getElementById('focusTaskInfo').style.display=m==='task'?'flex':'none';
+  stopFocus();
+  if(m==='task')renderFocusTaskList();
+}
+
+function renderFocusTaskList(){
+  const wrap=document.getElementById('focusTaskList');if(!wrap)return;
+  wrap.innerHTML='';
+  const pending=tasks.filter(t=>!t.done);
+  if(!pending.length){
+    wrap.innerHTML='<div style="text-align:center;padding:20px;color:var(--text2);font-size:13px">所有任务已完成 🎉</div>';
+    return;
+  }
+  pending.forEach(t=>{
+    const m=SUBJ_META[t.subj]||SUBJ_META.oth;
+    const isSelected=t.id===activeTaskId||t.id===selectedFocusTaskId;
+    const div=document.createElement('div');
+    div.style.cssText=`display:flex;align-items:center;gap:10px;padding:13px 14px;background:${isSelected?'rgba(167,139,250,.1)':'rgba(255,255,255,.03)'};border:1px solid ${isSelected?'rgba(167,139,250,.35)':'rgba(255,255,255,.07)'};border-radius:15px;margin-bottom:7px;cursor:pointer;transition:all .2s`;
+    div.innerHTML=`
+      <div style="width:9px;height:9px;border-radius:50%;background:${m.color};flex-shrink:0;${isSelected?'box-shadow:0 0 8px '+m.color:''}"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:${isSelected?700:500};color:${isSelected?'var(--text0)':'var(--text1)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:2px">⏱ ${t.dur} 分钟 · ${m.label}</div>
+      </div>
+      ${isSelected?`<div style="font-size:11px;font-weight:700;color:var(--purple2);background:rgba(167,139,250,.15);border-radius:99px;padding:3px 10px">专注中</div>`:''}
+    `;
+    div.onclick=()=>{selectedFocusTaskId=t.id;loadTaskFocus(t.id);renderFocusTaskList()};
+    wrap.appendChild(div);
+  });
+}
+
+function loadTaskFocus(id){
+  const t=tasks.find(t=>t.id===id);if(!t)return;
+  activeTaskId=id;
+  const m=SUBJ_META[t.subj]||SUBJ_META.oth;
+  document.getElementById('ftiName').textContent=t.name;
+  document.getElementById('ftiSubj').textContent=m.label;
+  document.getElementById('ftiSubj').style.background=m.bg;
+  document.getElementById('ftiSubj').style.color=m.color;
+  resetRing();
+}
+
+function mainAction(){
+  if(focusState==='idle')startFocus();
+}
+
+function startFocus(){
+  if(focusMode==='task'&&activeTaskId===-1){
+    const first=tasks.find(t=>!t.done);
+    if(first){activeTaskId=first.id;loadTaskFocus(first.id);renderFocusTaskList()}
+    else{showToast('所有任务已完成 🎉');return}
+  }
+  focusState='running';
+  focusSecsLeft=FOCUS_SECS;
+  updateRingDisplay();
+  setRingGlow('running');
+  document.getElementById('btnMain').style.display='none';
+  document.getElementById('btnPause').style.display='flex';
+  document.getElementById('btnStop').style.display='flex';
+  document.getElementById('ringSub').textContent='专注中…';
+  clearInterval(focusInterval);
+  focusInterval=setInterval(focusTick,1000);
+}
+
+function focusTick(){
+  if(focusState!=='running')return;
+  focusSecsLeft--;
+  totalFocusMins=Math.round((FOCUS_SECS-focusSecsLeft)/60);
+  document.getElementById('fsMins').textContent=totalFocusMins+(totalFocusMins>=60?'h':'m');
+  updateRingDisplay();
+  if(focusSecsLeft<=0){clearInterval(focusInterval);onFocusComplete()}
+}
+
+function updateRingDisplay(){
+  const m=String(Math.floor(focusSecsLeft/60)).padStart(2,'0');
+  const s=String(focusSecsLeft%60).padStart(2,'0');
+  document.getElementById('ringM').textContent=m;
+  document.getElementById('ringS').textContent=s;
+  const pct=1-focusSecsLeft/FOCUS_SECS;
+  const circ=2*Math.PI*125;
+  document.getElementById('progressRing').style.strokeDashoffset=circ*(1-pct);
+  const pctTxt=Math.round(pct*100);
+  document.getElementById('ringPct').textContent=pctTxt>0?pctTxt+'%':'';
+  // urgency color shift
+  if(focusSecsLeft<=5*60&&focusState==='running'){
+    document.getElementById('progressRing').style.stroke='url(#rg1)';
+    document.getElementById('ringPct').style.color='var(--coral)';
+    document.getElementById('ringModeLabel').style.color='var(--coral)';
+    setRingGlow('urgent');
+  }
+}
+
+function pauseFocus(){
+  if(focusState==='running'){
+    focusState='paused';
+    document.getElementById('btnPause').textContent='▶ 继续';
+    document.getElementById('ringSub').textContent='已暂停';
+    setRingGlow('paused');
+  } else if(focusState==='paused'){
+    focusState='running';
+    document.getElementById('btnPause').textContent='⏸ 暂停';
+    document.getElementById('ringSub').textContent='专注中…';
+    setRingGlow('running');
+  }
+}
+
+function stopFocus(){
+  clearInterval(focusInterval);
+  focusState='idle';
+  focusSecsLeft=FOCUS_SECS;
+  resetRing();
+}
+
+function resetRing(){
+  document.getElementById('btnMain').style.display='flex';
+  document.getElementById('btnPause').style.display='none';
+  document.getElementById('btnStop').style.display='none';
+  document.getElementById('btnPause').textContent='⏸ 暂停';
+  document.getElementById('ringM').textContent='25';
+  document.getElementById('ringS').textContent='00';
+  document.getElementById('ringSub').textContent='点击开始';
+  document.getElementById('ringPct').textContent='';
+  document.getElementById('progressRing').style.strokeDashoffset='785';
+  document.getElementById('progressRing').setAttribute('stroke','url(#rg1)');
+  document.getElementById('ringModeLabel').style.color='var(--purple)';
+  setRingGlow('idle');
+}
+
+function setRingGlow(state){
+  const g=document.getElementById('ringGlow');
+  g.className='ring-glow '+state;
+  if(state==='urgent'){g.style.boxShadow='0 0 60px rgba(255,123,107,.3),0 0 120px rgba(255,123,107,.12)'}
+  else g.style.boxShadow='';
+}
+
+function onFocusComplete(){
+  tomatoesDone++;
+  document.getElementById('fsTomatoes').textContent=tomatoesDone;
+  renderTomatoes();
+  // show completion overlay
+  if(focusMode==='task'&&activeTaskId!==-1){
+    const t=tasks.find(t=>t.id===activeTaskId);
+    if(t){
+      document.getElementById('coTaskName').textContent=t.name;
+      document.getElementById('coTaskSub').textContent=(SUBJ_META[t.subj]||SUBJ_META.oth).label+' · 已专注 25 分钟';
+    }
+    document.getElementById('completeOverlay').style.display='flex';
+  } else {
+    startBreak();
+  }
+}
+
+function confirmTaskDone(){
+  if(activeTaskId!==-1){
+    const t=tasks.find(t=>t.id===activeTaskId);
+    if(t){t.done=true;renderTasks();saveTasks()}
+    // find next task
+    const next=tasks.find(t=>!t.done);
+    if(next){selectedFocusTaskId=next.id;activeTaskId=next.id;loadTaskFocus(next.id);renderFocusTaskList()}
+    else{activeTaskId=-1}
+  }
+  document.getElementById('completeOverlay').style.display='none';
+  startBreak();
+}
+
+function continueTask(){
+  document.getElementById('completeOverlay').style.display='none';
+  startFocus();
+}
+
+function skipConfirm(){
+  document.getElementById('completeOverlay').style.display='none';
+  startBreak();
+}
+
+function startBreak(){
+  focusState='break';
+  breakSecsLeft=BREAK_SECS;
+  setRingGlow('break');
+  document.getElementById('progressRing').setAttribute('stroke','url(#rg2)');
+  document.getElementById('ringModeLabel').textContent='休息时间';
+  document.getElementById('ringModeLabel').style.color='var(--green)';
+  document.getElementById('ringPct').style.color='var(--green)';
+  document.getElementById('ringSub').textContent='放松一下';
+  document.getElementById('breakOverlay').style.display='flex';
+  document.getElementById('breakTime').textContent='05:00';
+  clearInterval(focusInterval);
+  focusInterval=setInterval(breakTick,1000);
+}
+
+function breakTick(){
+  breakSecsLeft--;
+  const m=String(Math.floor(breakSecsLeft/60)).padStart(2,'0');
+  const s=String(breakSecsLeft%60).padStart(2,'0');
+  document.getElementById('breakTime').textContent=m+':'+s;
+  const circ=2*Math.PI*125;
+  document.getElementById('progressRing').style.strokeDashoffset=circ*(1-breakSecsLeft/BREAK_SECS);
+  document.getElementById('ringM').textContent=m;
+  document.getElementById('ringS').textContent=s;
+  if(breakSecsLeft<=0){clearInterval(focusInterval);endBreak()}
+}
+
+function skipBreak(){clearInterval(focusInterval);endBreak()}
+
+function endBreak(){
+  document.getElementById('breakOverlay').style.display='none';
+  focusState='idle';
+  document.getElementById('ringModeLabel').textContent='专注时间';
+  resetRing();
+  renderFocusTaskList();
+}
+
+function renderTomatoes(){
+  const track=document.getElementById('tomatoTrack');
+  track.innerHTML='';
+  const total=Math.max(4,tomatoesDone+1);
+  for(let i=0;i<total;i++){
+    const d=document.createElement('div');
+    d.className='tom'+(i<tomatoesDone?' done':i===tomatoesDone?' active':'');
+    track.appendChild(d);
+  }
+}
+renderTomatoes();
+
+// ── DEMO: quick-start focus with 3-sec countdown for demo ──
+function demoQuickStart(){
+  // jump timer to near-end for demo
+  focusSecsLeft=6;
+  if(focusState!=='running')startFocus();
+  focusSecsLeft=6;
+}
+</script>
+</body>
+</html>

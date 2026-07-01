@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ParentBond · 家长首页</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700;800;900&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg0:#050B16;--bg1:#0B1730;--bg2:#0F1E3A;
+  --gold:#F5C842;--gold2:#FFE085;--gold3:#8A6800;
+  --green:#3DD68C;--green2:#6EEDB0;--green3:#0A5C38;
+  --purple:#A78BFA;--purple2:#C4B5FD;--purple3:#4C1D95;
+  --coral:#FF7B6B;--coral2:#FFA598;
+  --blue:#60A5FA;--blue2:#93C5FD;
+  --text0:#F5F1EA;--text1:#BDB7AE;--text2:#74706A;--text3:#2E2B28;
+  --bd:rgba(255,255,255,.08);--bd2:rgba(255,255,255,.15);--bd3:rgba(255,255,255,.045);
+
+  /* ── unified spacing scale ── */
+  --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:20px;--sp-6:24px;--sp-7:32px;--sp-8:40px;
+  /* ── unified radius scale ── */
+  --r-sm:14px;--r-md:18px;--r-lg:24px;--r-xl:30px;
+}
+body{font-family:'Inter',-apple-system,sans-serif;background:#030810;display:flex;justify-content:center;align-items:flex-start;min-height:100vh;padding:24px 12px 48px}
+
+/* ══ SHELL ══ */
+.shell{width:393px;min-height:852px;background:var(--bg1);border-radius:52px;position:relative;overflow:hidden;
+  box-shadow:0 0 0 1px rgba(255,255,255,.09),0 60px 160px rgba(0,0,0,.97),inset 0 1px 0 rgba(255,255,255,.07)}
+canvas.sf{position:absolute;inset:0;pointer-events:none;z-index:0}
+.orb{position:absolute;border-radius:50%;filter:blur(86px);pointer-events:none;z-index:0}
+.o1{width:300px;height:300px;background:radial-gradient(circle,rgba(245,200,66,.085) 0%,transparent 70%);top:-90px;right:-70px}
+.o2{width:340px;height:340px;background:radial-gradient(circle,rgba(167,139,250,.065) 0%,transparent 70%);top:380px;left:-110px}
+.o3{width:230px;height:230px;background:radial-gradient(circle,rgba(61,214,140,.06) 0%,transparent 70%);bottom:120px;right:-80px}
+
+/* notch / status */
+.notch{position:absolute;top:13px;left:50%;transform:translateX(-50%);width:126px;height:36px;background:#030710;border-radius:20px;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 10px}
+.n-cam{width:12px;height:12px;background:#0A0F20;border-radius:50%;border:2px solid #0f142a}
+.n-pill{width:56px;height:6px;background:#0A0F20;border-radius:3px}
+.sbar{position:relative;z-index:20;display:flex;justify-content:space-between;align-items:center;padding:14px 26px 0;margin-top:54px}
+.sbar-t{font-size:16px;font-weight:700;color:var(--text0);letter-spacing:-.4px;font-variant-numeric:tabular-nums}
+.sbar-r{font-size:11px;color:var(--text0);letter-spacing:.02em}
+
+/* scroll */
+.scroll{position:relative;z-index:10;padding:0 20px 116px;overflow-y:auto;max-height:752px}
+.scroll::-webkit-scrollbar{display:none}
+
+/* bottom nav */
+.bnav{position:absolute;bottom:0;left:0;right:0;height:90px;background:rgba(4,9,20,.97);backdrop-filter:blur(28px);border-top:1px solid rgba(255,255,255,.06);display:flex;align-items:flex-start;padding-top:12px;z-index:200}
+.bni{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:4px 0;position:relative;transition:all .2s}
+.bni-icon{font-size:21px;line-height:1;transition:transform .2s}
+.bni-lbl{font-size:9.5px;font-weight:500;color:var(--text2);transition:color .2s;letter-spacing:.01em}
+.bni.on .bni-icon{transform:translateY(-2px)}
+.bni.on .bni-lbl{color:var(--gold);font-weight:700}
+.bni-dot{position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:4px;height:4px;background:var(--gold);border-radius:50%;box-shadow:0 0 8px var(--gold)}
+.fab-w{flex:1;display:flex;justify-content:center;align-items:flex-start}
+.fab{width:54px;height:54px;background:linear-gradient(135deg,#7C3AED,#4C1D95);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 5px 20px rgba(76,29,149,.55);margin-top:-11px;cursor:pointer;transition:all .22s}
+.fab:hover{transform:scale(1.07) translateY(-2px)}
+
+/* animations */
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.6)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(200%)}}
+@keyframes popIn{0%{transform:scale(.8);opacity:0}70%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
+@keyframes breathe{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes barGrow{from{height:0}to{height:var(--h)}}
+@keyframes countUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes ringFill{from{stroke-dashoffset:440}to{stroke-dashoffset:var(--target)}}
+@keyframes sectionIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* toast */
+.toast{position:absolute;bottom:108px;left:50%;transform:translateX(-50%);background:rgba(18,26,48,.97);border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:11px 20px;font-size:13px;color:var(--text1);z-index:900;white-space:nowrap;backdrop-filter:blur(12px);animation:fadeUp .25s ease;pointer-events:none;box-shadow:0 12px 30px rgba(0,0,0,.5)}
+
+/* ══════════════════════════════
+   SHARED COMPONENTS
+══════════════════════════════ */
+.sec{animation:sectionIn .5s ease both}
+.sec-row{display:flex;justify-content:space-between;align-items:baseline;margin:34px 0 14px}
+.sec-row:first-of-type{margin-top:30px}
+.sec-t{font-size:15px;font-weight:700;color:var(--text0);letter-spacing:-.2px;display:flex;align-items:center;gap:7px}
+.sec-t .sec-dot{width:5px;height:5px;border-radius:50%;background:var(--gold);box-shadow:0 0 6px rgba(245,200,66,.6)}
+.sec-m{font-size:12.5px;color:var(--purple2);font-weight:600;cursor:pointer;transition:opacity .2s;display:flex;align-items:center;gap:2px}
+.sec-m:hover{opacity:.75}
+.sec-m::after{content:'›';font-size:14px}
+.card{background:var(--bd3);border:1px solid var(--bd);border-radius:var(--r-md);transition:all .22s}
+.card:hover{border-color:var(--bd2)}
+
+/* ══════════════════════════════
+   HEADER AREA
+══════════════════════════════ */
+.page-header{padding:22px 2px 0;display:flex;justify-content:space-between;align-items:flex-start}
+.ph-greeting{font-size:12.5px;color:var(--text2);margin-bottom:8px;display:flex;align-items:center;gap:8px;font-weight:500}
+.ph-greeting .ph-date{background:rgba(255,255,255,.055);border:1px solid var(--bd);border-radius:99px;padding:3px 10px;font-size:10.5px;font-weight:600;color:var(--text1)}
+.ph-name{font-size:27px;font-weight:800;color:var(--text0);letter-spacing:-.7px;line-height:1.15}
+.ph-name em{font-style:normal;color:var(--gold)}
+.ph-sub{font-size:13px;color:var(--text2);margin-top:6px;font-weight:400;line-height:1.4}
+.ph-sub b{color:var(--gold);font-weight:700}
+.ph-right{display:flex;flex-direction:column;align-items:flex-end;gap:12px}
+.ph-av{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#1A4E35,#0D2E1E);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 0 2px rgba(61,214,140,.22),0 4px 14px rgba(0,0,0,.4);cursor:pointer}
+.ph-notif{position:relative;cursor:pointer}
+.ph-notif-dot{position:absolute;top:-2px;right:-2px;width:8px;height:8px;background:var(--coral);border-radius:50%;border:2px solid var(--bg1)}
+.ph-notif-bell{width:34px;height:34px;background:rgba(255,255,255,.055);border:1px solid var(--bd);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px}
+
+/* ══════════════════════════════
+   CHILD STATUS HERO CARD
+══════════════════════════════ */
+.child-hero{
+  border-radius:var(--r-xl);padding:0;margin-top:24px;
+  position:relative;overflow:hidden;
+  background:linear-gradient(150deg,#101E48 0%,#0B1534 50%,#121E46 100%);
+  border:1px solid rgba(255,255,255,.1);
+  cursor:pointer;transition:transform .22s,box-shadow .22s;
+}
+.child-hero:hover{transform:translateY(-2px);box-shadow:0 16px 50px rgba(0,0,0,.5)}
+.child-hero::after{content:'';position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.025) 50%,transparent 70%);animation:shimmer 5s linear infinite;pointer-events:none}
+.ch-glow{position:absolute;top:-55px;right:-45px;width:190px;height:190px;background:radial-gradient(circle,rgba(245,200,66,.14) 0%,transparent 65%);border-radius:50%;pointer-events:none}
+
+.ch-top{padding:24px 24px 20px;display:flex;align-items:flex-start;gap:16px}
+.ch-av-wrap{position:relative;flex-shrink:0}
+.ch-av{width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#2C1E04,#4A3410);display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 0 0 3px rgba(245,200,66,.22),0 6px 18px rgba(0,0,0,.4)}
+.ch-status-dot{position:absolute;bottom:2px;right:2px;width:14px;height:14px;border-radius:50%;border:2.5px solid var(--bg1)}
+.ch-status-dot.online{background:var(--green);box-shadow:0 0 8px rgba(61,214,140,.6)}
+.ch-status-dot.offline{background:var(--text2)}
+.ch-meta{flex:1;min-width:0}
+.ch-name{font-size:18.5px;font-weight:800;color:var(--text0);letter-spacing:-.4px;margin-bottom:5px}
+.ch-grade{font-size:11.5px;font-weight:500;color:var(--text2);margin-bottom:11px}
+.ch-state-pill{display:inline-flex;align-items:center;gap:6px;border-radius:99px;padding:6px 13px;font-size:11.5px;font-weight:600}
+.csp-focus{background:rgba(167,139,250,.18);border:1px solid rgba(167,139,250,.3);color:var(--purple2)}
+.csp-study{background:rgba(61,214,140,.14);border:1px solid rgba(61,214,140,.25);color:var(--green2)}
+.csp-rest{background:rgba(245,200,66,.13);border:1px solid rgba(245,200,66,.24);color:var(--gold2)}
+.csp-offline{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text2)}
+.pulse-dot{width:6px;height:6px;border-radius:50%;animation:pulse 1.8s ease-in-out infinite;flex-shrink:0}
+
+.ch-mood{flex-shrink:0;text-align:center;padding-top:1px}
+.ch-mood-lbl{font-size:9px;color:var(--text2);font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px}
+.ch-mood-face{font-size:23px;line-height:1}
+.ch-mood-txt{font-size:9.5px;color:var(--gold);margin-top:5px;font-weight:600}
+
+/* daily progress ring + stats */
+.ch-body{padding:6px 24px 22px;display:flex;gap:20px;align-items:center}
+.ring-mini-wrap{position:relative;width:88px;height:88px;flex-shrink:0}
+.ring-mini-wrap svg{transform:rotate(-90deg)}
+.ring-mini-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring-mini-val{font-size:18px;font-weight:800;color:var(--text0);letter-spacing:-.5px;line-height:1}
+.ring-mini-lbl{font-size:9px;color:var(--text2);margin-top:3px;letter-spacing:.04em}
+
+.ch-stats{flex:1;display:flex;flex-direction:column;gap:13px;min-width:0}
+.ch-stat-row{display:flex;align-items:center;gap:10px}
+.ch-stat-icon{width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.ch-stat-body{flex:1;min-width:0}
+.ch-stat-label{font-size:10.5px;color:var(--text2);margin-bottom:5px;font-weight:500}
+.ch-stat-bar-wrap{height:5px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden}
+.ch-stat-bar{height:100%;border-radius:99px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.ch-stat-val{font-size:11.5px;font-weight:700;flex-shrink:0;min-width:38px;text-align:right}
+
+/* mood / today summary bottom strip */
+.ch-footer{border-top:1px solid rgba(255,255,255,.07);padding:16px 24px;display:flex;align-items:flex-start;gap:11px}
+.ch-footer-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.ch-footer-txt{font-size:12.5px;color:var(--text1);flex:1;line-height:1.55}
+.ch-footer-arr{font-size:16px;color:var(--text2);flex-shrink:0}
+
+/* ══════════════════════════════
+   TODAY TASK LIST (read-only)
+══════════════════════════════ */
+.task-snapshot{background:var(--bd3);border:1px solid var(--bd);border-radius:var(--r-lg);overflow:hidden}
+.ts-header{padding:18px 20px 14px;display:flex;justify-content:space-between;align-items:center}
+.ts-title{font-size:14.5px;font-weight:700;color:var(--text0)}
+.ts-prog{font-size:12.5px;font-weight:700}
+.ts-prog.done{color:var(--green)}
+.ts-prog.partial{color:var(--gold)}
+
+.ts-track{height:5px;background:rgba(255,255,255,.08);margin:0 20px 16px;border-radius:99px;overflow:hidden}
+.ts-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--green),var(--green2));box-shadow:0 0 8px rgba(61,214,140,.4);transition:width .8s cubic-bezier(.4,0,.2,1)}
+
+.task-row{display:flex;align-items:center;gap:12px;padding:13px 20px;position:relative}
+.task-row:not(:last-child)::after{content:'';position:absolute;left:52px;right:20px;bottom:0;height:1px;background:var(--bd)}
+.tr-check{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.tr-check.done{background:var(--green);box-shadow:0 0 10px rgba(61,214,140,.4);color:#fff}
+.tr-check.pending{background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);color:transparent}
+.tr-check.active{background:rgba(167,139,250,.2);border:1.5px solid rgba(167,139,250,.45)}
+.tr-check.active::after{content:'';width:8px;height:8px;background:var(--purple);border-radius:50%;animation:pulse 1.4s ease-in-out infinite}
+.tr-subj{font-size:10px;font-weight:700;letter-spacing:.05em;padding:4px 9px;border-radius:7px;flex-shrink:0;text-transform:uppercase}
+.tr-name{flex:1;font-size:13px;color:var(--text0);font-weight:500;line-height:1.4}
+.tr-name.done{text-decoration:line-through;color:var(--text2)}
+.tr-dur{font-size:11px;color:var(--text2);flex-shrink:0}
+.tr-dur.active{color:var(--purple2);font-weight:600}
+
+/* ══════════════════════════════
+   FOCUS ACTIVITY (live timer)
+══════════════════════════════ */
+.focus-live{
+  background:linear-gradient(135deg,#150A40,#1E1060);
+  border:1px solid rgba(167,139,250,.22);
+  border-radius:var(--r-lg);padding:22px;
+  position:relative;overflow:hidden;cursor:pointer;
+  transition:transform .22s;
+}
+.focus-live:hover{transform:translateY(-1px)}
+.fl-glow{position:absolute;top:-30px;right:-30px;width:130px;height:130px;background:radial-gradient(circle,rgba(167,139,250,.22) 0%,transparent 65%);border-radius:50%;pointer-events:none}
+.fl-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.fl-label{font-size:11px;font-weight:700;color:var(--purple);letter-spacing:.12em;text-transform:uppercase}
+.fl-live-pill{display:flex;align-items:center;gap:6px;background:rgba(61,214,140,.14);border:1px solid rgba(61,214,140,.25);border-radius:99px;padding:5px 12px;font-size:11px;font-weight:600;color:var(--green)}
+.fl-body{display:flex;align-items:center;gap:18px}
+.fl-ring-wrap{position:relative;width:68px;height:68px;flex-shrink:0}
+.fl-ring-wrap svg{transform:rotate(-90deg)}
+.fl-ring-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.fl-ring-time{font-size:14px;font-weight:700;color:var(--text0);letter-spacing:-.5px;line-height:1;font-variant-numeric:tabular-nums}
+.fl-ring-lbl{font-size:8px;color:var(--text2);margin-top:2px}
+.fl-info{flex:1;min-width:0}
+.fl-task{font-size:14.5px;font-weight:700;color:var(--text0);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fl-sub{font-size:11.5px;color:var(--text2);margin-bottom:11px}
+.fl-tomatoes{display:flex;gap:6px;align-items:center}
+.fl-tom{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.1)}
+.fl-tom.done{background:var(--purple);border-color:rgba(167,139,250,.5);box-shadow:0 0 6px rgba(167,139,250,.4)}
+.fl-tom.cur{background:var(--gold);border-color:rgba(245,200,66,.5);box-shadow:0 0 6px rgba(245,200,66,.4);animation:breathe 1.5s ease-in-out infinite}
+.fl-sync{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:12px 14px;margin-top:18px}
+.fl-sync-txt{flex:1;font-size:12px;color:var(--text1);line-height:1.45}
+.fl-sync-btn{font-size:11.5px;font-weight:700;color:var(--purple2);background:rgba(167,139,250,.18);border:1px solid rgba(167,139,250,.28);border-radius:99px;padding:7px 14px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.fl-sync-btn:hover{background:rgba(167,139,250,.26)}
+
+/* ══════════════════════════════
+   DAD SYNC ACTIVE CARD
+══════════════════════════════ */
+.sync-active{
+  background:linear-gradient(135deg,rgba(61,214,140,.08),rgba(61,214,140,.04));
+  border:1px solid rgba(61,214,140,.18);
+  border-radius:var(--r-lg);padding:18px;
+  display:flex;align-items:stretch;gap:14px;
+}
+.sa-player{flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:14px;text-align:center}
+.sa-av{font-size:26px;margin-bottom:6px}
+.sa-name{font-size:12px;font-weight:700;color:var(--text0);margin-bottom:5px}
+.sa-status{font-size:10px;display:flex;align-items:center;justify-content:center;gap:5px;margin-bottom:8px}
+.sa-time{font-size:20px;font-weight:700;color:var(--text0);letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.sa-vs{display:flex;align-items:center;font-size:18px;color:var(--text2);flex-shrink:0}
+.sa-prize{margin-top:12px;background:rgba(245,200,66,.07);border:1px solid rgba(245,200,66,.15);border-radius:12px;padding:10px 14px;font-size:11.5px;color:var(--gold);text-align:center;line-height:1.5}
+
+/* ══════════════════════════════
+   WALLET QUICK VIEW
+══════════════════════════════ */
+.wallet-strip{
+  background:linear-gradient(135deg,#1E1402,#2C2004);
+  border:1px solid rgba(245,200,66,.14);
+  border-radius:var(--r-lg);padding:20px 22px;
+  cursor:pointer;position:relative;overflow:hidden;transition:transform .22s;
+}
+.wallet-strip:hover{transform:translateY(-1px)}
+.ws-glow{position:absolute;top:-20px;right:-20px;width:110px;height:110px;background:radial-gradient(circle,rgba(245,200,66,.2) 0%,transparent 65%);border-radius:50%;pointer-events:none}
+.ws-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px}
+.ws-label{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+.ws-balance{font-size:29px;font-weight:800;color:var(--text0);letter-spacing:-1.2px;line-height:1}
+.ws-balance sup{font-size:13px;vertical-align:top;margin-top:4px;color:var(--gold)}
+.ws-month-lbl{font-size:10px;color:var(--text2);margin-bottom:6px}
+.ws-month-in{font-size:13.5px;font-weight:700;color:var(--green)}
+.ws-month-out{font-size:11.5px;color:var(--coral);margin-top:4px}
+.ws-bottom{display:flex;gap:10px;align-items:center}
+.ws-stat{flex:1;background:rgba(255,255,255,.05);border-radius:11px;padding:10px 11px;text-align:center}
+.ws-stat-v{font-size:13.5px;font-weight:700;margin-bottom:3px}
+.ws-stat-l{font-size:9px;color:var(--text2)}
+.ws-pending{display:flex;align-items:center;gap:7px;background:rgba(245,200,66,.12);border:1px solid rgba(245,200,66,.22);border-radius:11px;padding:10px 13px;cursor:pointer}
+.ws-pending-dot{width:7px;height:7px;background:var(--gold);border-radius:50%;animation:pulse 1.4s ease-in-out infinite;flex-shrink:0}
+.ws-pending-txt{font-size:11px;font-weight:600;color:var(--gold2);flex:1}
+.ws-pending-amt{font-size:13px;font-weight:800;color:var(--green)}
+
+/* ══════════════════════════════
+   WEEKLY FOCUS CHART
+══════════════════════════════ */
+.week-chart{background:var(--bd3);border:1px solid var(--bd);border-radius:var(--r-lg);padding:20px}
+.wc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.wc-title{font-size:14.5px;font-weight:700;color:var(--text0)}
+.wc-range{font-size:11px;color:var(--text2)}
+.wc-bars{display:flex;align-items:flex-end;gap:7px;height:78px;margin-bottom:12px}
+.wc-col{flex:1;display:flex;flex-direction:column;align-items:center;height:100%;gap:6px}
+.wc-bar-wrap{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center}
+.wc-bar{width:100%;border-radius:5px 5px 0 0;min-height:3px;position:relative}
+.wc-bar .wc-tip{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:600;color:var(--text2);white-space:nowrap}
+.wc-bar.today .wc-tip{color:var(--green)}
+.wc-lbl{font-size:9px;color:var(--text2);font-weight:500}
+.wc-footer{display:flex;justify-content:space-between;padding-top:14px;border-top:1px solid var(--bd)}
+.wc-total{font-size:12px;color:var(--text1)}
+.wc-total strong{color:var(--text0);font-weight:700}
+.wc-vs{font-size:12px;color:var(--green);font-weight:600}
+
+/* ══════════════════════════════
+   MEMORY REMINDER
+══════════════════════════════ */
+.memory-remind{
+  background:linear-gradient(140deg,#0D1E46,#182E68);
+  border:1px solid rgba(96,165,250,.2);
+  border-radius:var(--r-lg);padding:20px 22px;
+  cursor:pointer;position:relative;overflow:hidden;transition:transform .22s;
+}
+.memory-remind:hover{transform:translateY(-1px)}
+.mr-glow{position:absolute;top:-20px;right:-20px;width:110px;height:110px;background:radial-gradient(circle,rgba(96,165,250,.22) 0%,transparent 65%);border-radius:50%;pointer-events:none}
+.mr-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.mr-icon{width:42px;height:42px;background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.22);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.mr-label{font-size:11px;font-weight:700;color:var(--blue);letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px}
+.mr-title{font-size:15px;font-weight:700;color:var(--text0);letter-spacing:-.3px}
+.mr-sub{font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:16px}
+.mr-btns{display:flex;gap:9px}
+.mr-btn-write{flex:1;padding:12px;background:rgba(96,165,250,.18);border:1px solid rgba(96,165,250,.28);border-radius:13px;text-align:center;font-size:13px;font-weight:600;color:var(--blue);cursor:pointer;transition:all .2s}
+.mr-btn-write:hover{background:rgba(96,165,250,.26)}
+.mr-btn-view{padding:12px 16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:13px;font-size:13px;color:var(--text1);cursor:pointer;transition:all .2s}
+.mr-btn-view:hover{background:rgba(255,255,255,.1)}
+
+/* ══════════════════════════════
+   QUICK ACTIONS
+══════════════════════════════ */
+.quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.qa{display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer}
+.qa-icon{width:54px;height:54px;border-radius:17px;display:flex;align-items:center;justify-content:center;font-size:22px;border:1px solid rgba(255,255,255,.08);transition:all .22s;position:relative}
+.qa-icon:hover{transform:scale(1.06)}
+.qa-icon .qa-badge{position:absolute;top:-4px;right:-4px;width:16px;height:16px;background:var(--coral);border-radius:50%;border:2px solid var(--bg1);display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:700}
+.qa-lbl{font-size:10.5px;font-weight:500;color:var(--text2);text-align:center;line-height:1.3}
+
+/* ══════════════════════════════
+   RECENT ACTIVITIES FEED
+══════════════════════════════ */
+.feed-card{background:var(--bd3);border:1px solid var(--bd);border-radius:var(--r-lg);padding:8px 18px 4px}
+.feed-item{display:flex;align-items:flex-start;gap:13px;padding:15px 0;position:relative}
+.feed-item:not(:last-child)::after{content:'';position:absolute;left:19px;top:48px;bottom:0;width:1px;background:rgba(255,255,255,.06)}
+.fi-av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1.5px solid rgba(255,255,255,.08)}
+.fi-body{flex:1;min-width:0;padding-top:2px}
+.fi-text{font-size:13px;color:var(--text0);line-height:1.55;margin-bottom:5px}
+.fi-text strong{color:var(--text0);font-weight:700}
+.fi-meta{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:7px}
+.fi-chip{font-size:10px;padding:3px 8px;border-radius:99px;font-weight:600}
+.fi-right{flex-shrink:0;text-align:right;padding-top:2px}
+.fi-val{font-size:14px;font-weight:700}
+.fi-val-sub{font-size:10px;color:var(--text2);margin-top:2px}
+
+/* ══════════════════════════════
+   INSIGHT CARD
+══════════════════════════════ */
+.insight-card{
+  background:linear-gradient(135deg,rgba(61,214,140,.07),rgba(61,214,140,.03));
+  border:1px solid rgba(61,214,140,.15);
+  border-radius:var(--r-md);padding:17px 18px;
+  display:flex;align-items:flex-start;gap:13px;
+}
+.insight-card+.insight-card{margin-top:11px}
+.ic-icon{font-size:22px;flex-shrink:0;margin-top:1px}
+.ic-title{font-size:13px;font-weight:700;color:var(--text0);margin-bottom:5px}
+.ic-sub{font-size:12px;color:var(--text1);line-height:1.6}
+
+/* footer cap */
+.scroll-end{height:8px}
+</style>
+</head>
+<body>
+<div class="shell" id="shell">
+  <canvas class="sf" id="sf"></canvas>
+  <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+  <div class="notch"><div class="n-cam"></div><div class="n-pill"></div><div class="n-cam"></div></div>
+  <div class="sbar"><div class="sbar-t" id="clockEl">21:14</div><div class="sbar-r">▲▲▲ &nbsp;🔋 92%</div></div>
+
+  <div class="scroll">
+
+    <!-- ══ HEADER ══ -->
+    <div class="page-header">
+      <div class="ph-left">
+        <div class="ph-greeting">
+          <span>晚上好</span>
+          <div class="ph-date" id="dateDisplay"></div>
+        </div>
+        <div class="ph-name">小明爸爸</div>
+        <div class="ph-sub">观察者视角 · 今天陪伴第 <b>7</b> 天</div>
+      </div>
+      <div class="ph-right">
+        <div class="ph-av">👨</div>
+        <div class="ph-notif" onclick="toast('暂无新通知')">
+          <div class="ph-notif-bell">🔔</div>
+          <div class="ph-notif-dot"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CHILD STATUS HERO ══ -->
+    <div class="child-hero sec" onclick="toast('查看小明详情')">
+      <div class="ch-glow"></div>
+
+      <!-- top: avatar + name + state -->
+      <div class="ch-top">
+        <div class="ch-av-wrap">
+          <div class="ch-av">🦊</div>
+          <div class="ch-status-dot online"></div>
+        </div>
+        <div class="ch-meta">
+          <div class="ch-name">小明</div>
+          <div class="ch-grade">四年级 · 刚刚活跃</div>
+          <div class="ch-state-pill csp-focus">
+            <div class="pulse-dot" style="background:var(--purple)"></div>
+            专注中 · 数学作业
+          </div>
+        </div>
+        <!-- today mood -->
+        <div class="ch-mood">
+          <div class="ch-mood-lbl">今日评价</div>
+          <div class="ch-mood-face">😊</div>
+          <div class="ch-mood-txt">状态不错</div>
+        </div>
+      </div>
+
+      <!-- body: ring + stats -->
+      <div class="ch-body">
+        <!-- daily completion ring -->
+        <div class="ring-mini-wrap">
+          <svg width="88" height="88" viewBox="0 0 88 88">
+            <defs>
+              <linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#3DD68C"/><stop offset="100%" style="stop-color:#0A5C38"/>
+              </linearGradient>
+            </defs>
+            <circle fill="none" stroke="rgba(255,255,255,.07)" stroke-width="7" cx="44" cy="44" r="36"/>
+            <circle id="heroRing" fill="none" stroke="url(#rg)" stroke-width="7" stroke-linecap="round"
+              cx="44" cy="44" r="36"
+              stroke-dasharray="226" stroke-dashoffset="170"
+              style="filter:drop-shadow(0 0 6px rgba(61,214,140,.5));transition:stroke-dashoffset .8s cubic-bezier(.4,0,.2,1)"/>
+          </svg>
+          <div class="ring-mini-inner">
+            <div class="ring-mini-val" style="color:var(--green)">3/4</div>
+            <div class="ring-mini-lbl">任务</div>
+          </div>
+        </div>
+
+        <!-- stat bars -->
+        <div class="ch-stats">
+          <div class="ch-stat-row">
+            <div class="ch-stat-icon" style="background:rgba(167,139,250,.14)">⏱</div>
+            <div class="ch-stat-body">
+              <div class="ch-stat-label">专注时长</div>
+              <div class="ch-stat-bar-wrap">
+                <div class="ch-stat-bar" style="width:75%;background:linear-gradient(90deg,var(--purple),var(--purple2));box-shadow:0 0 6px rgba(167,139,250,.4)"></div>
+              </div>
+            </div>
+            <div class="ch-stat-val" style="color:var(--purple2)">45m</div>
+          </div>
+          <div class="ch-stat-row">
+            <div class="ch-stat-icon" style="background:rgba(245,200,66,.14)">🎯</div>
+            <div class="ch-stat-body">
+              <div class="ch-stat-label">游戏训练</div>
+              <div class="ch-stat-bar-wrap">
+                <div class="ch-stat-bar" style="width:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));box-shadow:0 0 6px rgba(245,200,66,.4)"></div>
+              </div>
+            </div>
+            <div class="ch-stat-val" style="color:var(--gold2)">✓ 完成</div>
+          </div>
+          <div class="ch-stat-row">
+            <div class="ch-stat-icon" style="background:rgba(255,123,107,.12)">📝</div>
+            <div class="ch-stat-body">
+              <div class="ch-stat-label">作业进度</div>
+              <div class="ch-stat-bar-wrap">
+                <div class="ch-stat-bar" style="width:75%;background:linear-gradient(90deg,var(--coral),var(--coral2));box-shadow:0 0 5px rgba(255,123,107,.35)"></div>
+              </div>
+            </div>
+            <div class="ch-stat-val" style="color:var(--coral2)">3/4</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- footer hint -->
+      <div class="ch-footer">
+        <div class="ch-footer-icon">💬</div>
+        <div class="ch-footer-txt">今天很认真，数学计算题全部做完了，语文日记还没写</div>
+        <div class="ch-footer-arr">›</div>
+      </div>
+    </div>
+
+    <!-- ══ QUICK ACTIONS ══ -->
+    <div class="sec-row sec"><div class="sec-t"><span class="sec-dot"></span>快捷操作</div></div>
+    <div class="quick-grid sec">
+      <div class="qa" onclick="toast('发起零花钱奖励')">
+        <div class="qa-icon" style="background:linear-gradient(135deg,rgba(245,200,66,.18),rgba(245,200,66,.08));border-color:rgba(245,200,66,.22)">
+          💰
+          <div class="qa-badge">1</div>
+        </div>
+        <div class="qa-lbl">发奖励</div>
+      </div>
+      <div class="qa" onclick="toast('同步专注计时')">
+        <div class="qa-icon" style="background:linear-gradient(135deg,rgba(167,139,250,.18),rgba(167,139,250,.08));border-color:rgba(167,139,250,.22)">⏱</div>
+        <div class="qa-lbl">同步专注</div>
+      </div>
+      <div class="qa" onclick="toast('写本周记录')">
+        <div class="qa-icon" style="background:linear-gradient(135deg,rgba(96,165,250,.16),rgba(96,165,250,.07));border-color:rgba(96,165,250,.2)">📓</div>
+        <div class="qa-lbl">写记录</div>
+      </div>
+      <div class="qa" onclick="toast('写未来信')">
+        <div class="qa-icon" style="background:linear-gradient(135deg,rgba(61,214,140,.15),rgba(61,214,140,.06));border-color:rgba(61,214,140,.2)">💌</div>
+        <div class="qa-lbl">未来信</div>
+      </div>
+    </div>
+
+    <!-- ══ TODAY TASK SNAPSHOT ══ -->
+    <div class="sec-row sec"><div class="sec-t"><span class="sec-dot"></span>今日作业</div><div class="sec-m">详情</div></div>
+    <div class="task-snapshot sec">
+      <div class="ts-header">
+        <div class="ts-title">小明的任务清单</div>
+        <div class="ts-prog partial">3 / 4 完成</div>
+      </div>
+      <div class="ts-track"><div class="ts-fill" id="taskFill" style="width:75%"></div></div>
+      <div class="task-row">
+        <div class="tr-check done">✓</div>
+        <span class="tr-subj" style="background:rgba(167,139,250,.14);color:var(--purple2)">数学</span>
+        <div class="tr-name done">练习册第5页，15道计算题</div>
+        <div class="tr-dur">20m</div>
+      </div>
+      <div class="task-row">
+        <div class="tr-check done">✓</div>
+        <span class="tr-subj" style="background:rgba(61,214,140,.13);color:var(--green2)">英语</span>
+        <div class="tr-name done">背诵单词 Unit 7，共20个</div>
+        <div class="tr-dur">15m</div>
+      </div>
+      <div class="task-row">
+        <div class="tr-check active"></div>
+        <span class="tr-subj" style="background:rgba(245,200,66,.13);color:#FFD060">语文</span>
+        <div class="tr-name">日记一篇，不少于200字</div>
+        <div class="tr-dur active">进行中…</div>
+      </div>
+      <div class="task-row">
+        <div class="tr-check done">✓</div>
+        <span class="tr-subj" style="background:rgba(96,165,250,.12);color:var(--blue2)">阅读</span>
+        <div class="tr-name done">课外书阅读30分钟</div>
+        <div class="tr-dur">30m</div>
+      </div>
+    </div>
+
+    <!-- ══ FOCUS LIVE CARD ══ -->
+    <div class="sec-row sec"><div class="sec-t"><span class="sec-dot"></span>专注动态</div><div class="sec-m">加入同步</div></div>
+    <div class="focus-live sec">
+      <div class="fl-glow"></div>
+      <div class="fl-header">
+        <div class="fl-label">实时专注</div>
+        <div class="fl-live-pill"><div class="pulse-dot" style="background:var(--green)"></div>进行中</div>
+      </div>
+      <div class="fl-body">
+        <!-- mini ring -->
+        <div class="fl-ring-wrap">
+          <svg width="68" height="68" viewBox="0 0 68 68">
+            <defs>
+              <linearGradient id="flg" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#A78BFA"/><stop offset="100%" style="stop-color:#4C1D95"/>
+              </linearGradient>
+            </defs>
+            <circle fill="none" stroke="rgba(255,255,255,.06)" stroke-width="6" cx="34" cy="34" r="28"/>
+            <circle id="focusLiveRing" fill="none" stroke="url(#flg)" stroke-width="6" stroke-linecap="round"
+              cx="34" cy="34" r="28"
+              stroke-dasharray="176" stroke-dashoffset="110"
+              style="filter:drop-shadow(0 0 5px rgba(167,139,250,.55));transition:stroke-dashoffset 1s linear"/>
+          </svg>
+          <div class="fl-ring-inner">
+            <div class="fl-ring-time" id="liveTimer">14:22</div>
+            <div class="fl-ring-lbl">剩余</div>
+          </div>
+        </div>
+        <div class="fl-info">
+          <div class="fl-task">语文 · 日记一篇</div>
+          <div class="fl-sub">第 2 个番茄 · 今日共 45 分钟</div>
+          <div class="fl-tomatoes">
+            <div class="fl-tom done"></div>
+            <div class="fl-tom cur"></div>
+            <div class="fl-tom"></div>
+            <div class="fl-tom"></div>
+            <span style="font-size:10px;color:var(--text2);margin-left:4px">今日进度</span>
+          </div>
+        </div>
+      </div>
+      <div class="fl-sync">
+        <div class="fl-sync-txt">💡 你也可以同步专注，父子一起比谁更专注</div>
+        <div class="fl-sync-btn" onclick="toast('已发起同步专注邀请！')">加入 →</div>
+      </div>
+    </div>
+
+    <!-- ══ DAD SYNC ACTIVE ══ -->
+    <!-- (shows when dad has joined sync focus) -->
+    <!--
+    <div class="sync-active">
+      <div class="sa-player">
+        <div class="sa-av">🦊</div>
+        <div class="sa-name">小明</div>
+        <div class="sa-status"><div class="pulse-dot" style="background:var(--green)"></div><span style="font-size:10px;color:var(--green)">专注中</span></div>
+        <div class="sa-time" id="childSyncTime">22:18</div>
+      </div>
+      <div class="sa-vs">⚡</div>
+      <div class="sa-player">
+        <div class="sa-av">👨</div>
+        <div class="sa-name">爸爸</div>
+        <div class="sa-status"><div class="pulse-dot" style="background:var(--green)"></div><span style="font-size:10px;color:var(--green)">专注中</span></div>
+        <div class="sa-time" id="dadSyncTime">31:47</div>
+      </div>
+    </div>
+    <div class="sa-prize">🏆 今日专注更久的人可以选晚饭菜</div>
+    -->
+
+    <!-- ══ WALLET QUICK ══ -->
+    <div class="sec-row sec"><div class="sec-t"><span class="sec-dot"></span>零花钱</div><div class="sec-m">账单详情</div></div>
+    <div class="wallet-strip sec" onclick="toast('查看零花钱详情')">
+      <div class="ws-glow"></div>
+      <div class="ws-top">
+        <div>
+          <div class="ws-label">小明零花钱</div>
+          <div class="ws-balance"><sup>¥</sup>47<span style="font-size:16px;color:var(--text1);font-weight:400">.50</span></div>
+        </div>
+        <div style="text-align:right">
+          <div class="ws-month-lbl">本月</div>
+          <div class="ws-month-in">+¥62</div>
+          <div class="ws-month-out">-¥14.50</div>
+        </div>
+      </div>
+      <div class="ws-bottom">
+        <div class="ws-stat">
+          <div class="ws-stat-v" style="color:var(--green)">8次</div>
+          <div class="ws-stat-l">获奖次数</div>
+        </div>
+        <div class="ws-stat">
+          <div class="ws-stat-v" style="color:var(--coral)">2次</div>
+          <div class="ws-stat-l">扣款次数</div>
+        </div>
+        <!-- pending award -->
+        <div class="ws-pending" onclick="toast('查看待确认奖励')">
+          <div class="ws-pending-dot"></div>
+          <div class="ws-pending-txt">待确认</div>
+          <div class="ws-pending-amt">+¥20</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ WEEKLY CHART ══ -->
+    <div class="sec-row sec"><div class="sec-t"><span class="sec-dot"></span>本周专注</div><div class="sec-m">月度报告</div></div>
+    <div class="week-chart sec">
+      <div class="wc-head">
+        <div class="wc-title">小明 · 专注时长（分钟）</div>
+        <div class="wc-range">6月12–18日</div>
+      </div>
+      <div class="wc-bars" id="wcBars"></div>
+      <div class="wc-footer">
+        <div class="wc-total">本周合计 <strong>4h 22m</strong></div>
+        <div class="wc-vs">↑ 比上周多 38 分钟</div>
+      </div>
+    </div>
+
+    <!-- ══ MEMORY REMIND ══ -->
+    <div class="sec-row sec" style="margin-bottom:0"><div class="sec-t"><span class="sec-dot"></span>成长时光机</div></div>
+    <div class="memory-remind sec" style="margin-top:14px">
+      <div class="mr-glow"></div>
+      <div class="mr-top">
+        <div class="mr-icon">📓</div>
+        <div>
+          <div class="mr-label">本周记录</div>
+          <div class="mr-title">第 24 周还没写</div>
+        </div>
+      </div>
+      <div class="mr-sub">每周记下一件小事，这些故事将在小明 18 岁时全部解锁</div>
+      <div class="mr-btns">
+        <div class="mr-btn-write" onclick="toast('进入记录页面')">✏️ 写本周故事</div>
+        <div class="mr-btn-view" onclick="toast('查看时间线')">查看时间线</div>
+      </div>
+    </div>
+
+    <!-- ══ INSIGHT CARD ══ -->
+    <div class="sec-row sec"><div class="sec-t"><span class="sec-dot"></span>专注洞察</div></div>
+    <div class="sec">
+      <div class="insight-card">
+        <div class="ic-icon">📈</div>
+        <div>
+          <div class="ic-title">连续 7 天完成作业</div>
+          <div class="ic-sub">小明已经保持了 7 天的学习节律，比上个月提升了 40%。今晚是个好时机表扬他一下。</div>
+        </div>
+      </div>
+      <div class="insight-card" style="background:linear-gradient(135deg,rgba(167,139,250,.07),rgba(167,139,250,.03));border-color:rgba(167,139,250,.14)">
+        <div class="ic-icon">🎯</div>
+        <div>
+          <div class="ic-title">舒尔特方格进步明显</div>
+          <div class="ic-sub">本周平均用时 25.2 秒，比上周快了 4.8 秒。专注力训练正在见效。</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ RECENT FEED ══ -->
+    <div class="sec-row sec"><div class="sec-t"><span class="sec-dot"></span>近期动态</div><div class="sec-m">全部</div></div>
+    <div class="feed-card sec">
+    <div id="feedList">
+      <div class="feed-item">
+        <div class="fi-av" style="background:rgba(61,214,140,.12);border-color:rgba(61,214,140,.2)">✓</div>
+        <div class="fi-body">
+          <div class="fi-text"><strong>小明</strong> 完成了今日数学作业</div>
+          <div class="fi-meta">20:45 <span class="fi-chip" style="background:rgba(167,139,250,.14);color:var(--purple2)">任务</span></div>
+        </div>
+        <div class="fi-right"><div class="fi-val" style="color:var(--green)">✓</div></div>
+      </div>
+      <div class="feed-item">
+        <div class="fi-av" style="background:rgba(167,139,250,.12);border-color:rgba(167,139,250,.2)">🍅</div>
+        <div class="fi-body">
+          <div class="fi-text"><strong>小明</strong> 完成了第 2 个番茄</div>
+          <div class="fi-meta">20:35 <span class="fi-chip" style="background:rgba(167,139,250,.14);color:var(--purple2)">专注</span></div>
+        </div>
+        <div class="fi-right"><div class="fi-val" style="color:var(--purple)">+1🍅</div></div>
+      </div>
+      <div class="feed-item">
+        <div class="fi-av" style="background:rgba(245,200,66,.12);border-color:rgba(245,200,66,.2)">⭐</div>
+        <div class="fi-body">
+          <div class="fi-text"><strong>爷爷</strong> 给小明发起奖励申请</div>
+          <div class="fi-meta">19:20 <span class="fi-chip" style="background:rgba(245,200,66,.13);color:var(--gold)">零花钱</span> 待小明确认</div>
+        </div>
+        <div class="fi-right"><div class="fi-val" style="color:var(--green)">+¥10</div><div class="fi-val-sub">待确认</div></div>
+      </div>
+      <div class="feed-item">
+        <div class="fi-av" style="background:rgba(61,214,140,.1);border-color:rgba(61,214,140,.18)">🔢</div>
+        <div class="fi-body">
+          <div class="fi-text"><strong>小明</strong> 舒尔特方格创个人最佳</div>
+          <div class="fi-meta">19:05 <span class="fi-chip" style="background:rgba(61,214,140,.13);color:var(--green2)">游戏</span></div>
+        </div>
+        <div class="fi-right"><div class="fi-val" style="color:var(--gold)">24.3s</div><div class="fi-val-sub">⭐ 最佳</div></div>
+      </div>
+      <div class="feed-item">
+        <div class="fi-av" style="background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.18)">📓</div>
+        <div class="fi-body">
+          <div class="fi-text"><strong>你</strong> 写下了第 23 条成长记录</div>
+          <div class="fi-meta">昨天 22:10 <span class="fi-chip" style="background:rgba(96,165,250,.13);color:var(--blue2)">时光机</span></div>
+        </div>
+        <div class="fi-right"><div class="fi-val" style="font-size:18px">📝</div></div>
+      </div>
+    </div>
+    </div>
+
+    <div class="scroll-end"></div>
+  </div><!-- /scroll -->
+
+  <!-- BOTTOM NAV -->
+  <div class="bnav">
+    <div class="bni on" id="bni-home">
+      <div class="bni-dot"></div>
+      <div class="bni-icon">🏠</div><div class="bni-lbl">首页</div>
+    </div>
+    <div class="bni" onclick="toast('孩子详情页')">
+      <div class="bni-icon">👦</div><div class="bni-lbl">孩子</div>
+    </div>
+    <div class="fab-w">
+      <div class="fab" onclick="toast('快速发起奖励')">💰</div>
+    </div>
+    <div class="bni" onclick="toast('成长时光机')">
+      <div class="bni-icon">📓</div><div class="bni-lbl">时光机</div>
+    </div>
+    <div class="bni" onclick="toast('用户中心')">
+      <div class="bni-icon">👨</div><div class="bni-lbl">我的</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STARFIELD ──
+const sf=document.getElementById('sf'),ctx=sf.getContext('2d');
+sf.width=393;sf.height=900;
+const stars=Array.from({length:160},()=>({x:Math.random()*393,y:Math.random()*900,r:.1+Math.random()*1.1,a:Math.random(),sp:.002+Math.random()*.009,ph:Math.random()*Math.PI*2}));
+function drawSF(t){ctx.clearRect(0,0,393,900);stars.forEach(s=>{const a=s.a*(.18+.82*Math.sin(t*s.sp+s.ph));ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${a})`;ctx.fill()});requestAnimationFrame(drawSF)}
+requestAnimationFrame(drawSF);
+
+// ── CLOCK & DATE ──
+function updateClock(){const n=new Date();document.getElementById('clockEl').textContent=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')}
+updateClock();setInterval(updateClock,15000);
+const nd=new Date();const days=['周日','周一','周二','周三','周四','周五','周六'];
+document.getElementById('dateDisplay').textContent=days[nd.getDay()]+' '+(nd.getMonth()+1)+'/'+(nd.getDate());
+
+// ── TOAST ──
+function toast(msg){
+  let t=document.querySelector('.toast');if(t)t.remove();
+  t=document.createElement('div');t.className='toast';t.textContent=msg;
+  document.getElementById('shell').appendChild(t);
+  setTimeout(()=>t&&t.remove(),2200);
+}
+
+// ── LIVE TIMER ──
+let liveSecs=14*60+22;
+setInterval(()=>{
+  if(liveSecs>0)liveSecs--;
+  const m=String(Math.floor(liveSecs/60)).padStart(2,'0'),s=String(liveSecs%60).padStart(2,'0');
+  const el=document.getElementById('liveTimer');if(el)el.textContent=m+':'+s;
+  // update ring
+  const ring=document.getElementById('focusLiveRing');
+  if(ring){
+    const prog=1-liveSecs/(25*60);
+    ring.style.strokeDashoffset=176*(1-prog);
+  }
+},1000);
+
+// ── WEEK CHART ──
+function buildWcBars(){
+  const data=[28,35,20,48,52,40,45];
+  const lbls=['周一','周二','周三','周四','周五','周六','今天'];
+  const max=Math.max(...data);
+  const wrap=document.getElementById('wcBars');if(!wrap)return;
+  wrap.innerHTML='';
+  data.forEach((v,i)=>{
+    const isT=i===data.length-1;
+    const col=document.createElement('div');col.className='wc-col';
+    const bw=document.createElement('div');bw.className='wc-bar-wrap';
+    const b=document.createElement('div');b.className='wc-bar'+(isT?' today':'');
+    const h=Math.round(v/max*100);
+    b.style.cssText=`height:${h}%;background:${isT?'linear-gradient(180deg,var(--green),var(--green3))':'rgba(167,139,250,.32)'};${isT?'box-shadow:0 0 8px rgba(61,214,140,.4)':''}`;
+    const tip=document.createElement('div');tip.className='wc-tip';tip.textContent=v+'m';
+    b.appendChild(tip);
+    bw.appendChild(b);
+    const l=document.createElement('div');l.className='wc-lbl';l.textContent=lbls[i];
+    col.appendChild(bw);col.appendChild(l);wrap.appendChild(col);
+  });
+}
+buildWcBars();
+
+// ── HERO RING animate on load ──
+setTimeout(()=>{
+  const ring=document.getElementById('heroRing');
+  if(ring){
+    ring.style.strokeDashoffset='57'; // 75% = 226*0.25=56.5
+  }
+},400);
+
+// ── STAGGERED SECTION REVEAL ──
+document.querySelectorAll('.sec').forEach((el,i)=>{
+  el.style.animationDelay=(i*55)+'ms';
+});
+</script>
+</body>
+</html>

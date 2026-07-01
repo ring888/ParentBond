@@ -1,0 +1,11 @@
+.auth-gate-loading {
+  display: grid;
+  min-height: 100vh;
+  background: #030810;
+}
+
+.auth-gate-loading {
+  place-items: center;
+  color: #f0ebe3;
+  font-size: 14px;
+}

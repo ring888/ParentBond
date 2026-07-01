@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700;800&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg1:#0B1730;
+  --purple:#A78BFA;--purple2:#C4B5FD;--purple3:#4C1D95;
+  --gold:#F5C842;--gold2:#FFE085;
+  --coral:#FF7B6B;--coral2:#FFA598;
+  --green:#3DD68C;--green2:#6EEDB0;--green3:#0A5C38;
+  --text0:#F0EBE3;--text1:#B8B2A8;--text2:#6A6560;
+  --bd:rgba(255,255,255,.07);
+}
+body{font-family:'Inter',-apple-system,sans-serif;background:#040810;display:flex;justify-content:center;align-items:flex-start;min-height:100vh;padding:20px 12px 40px}
+
+.shell{width:393px;min-height:852px;background:var(--bg1);border-radius:50px;position:relative;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.09),0 60px 160px rgba(0,0,0,.97),inset 0 1px 0 rgba(255,255,255,.07)}
+canvas.sf{position:absolute;inset:0;pointer-events:none;z-index:0}
+.orb{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0}
+.o1{width:300px;height:300px;top:-100px;right:-80px;transition:background 2s ease}
+.o2{width:360px;height:360px;top:300px;left:-120px;background:radial-gradient(circle,rgba(167,139,250,.05) 0%,transparent 70%)}
+.o3{width:240px;height:240px;bottom:80px;right:-70px;transition:background 2s ease}
+
+.notch{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:126px;height:36px;background:#030710;border-radius:20px;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 10px}
+.n-cam{width:12px;height:12px;background:#0A0F20;border-radius:50%;border:2px solid #0f142a}
+.n-pill{width:56px;height:6px;background:#0A0F20;border-radius:3px}
+.sbar{position:relative;z-index:20;display:flex;justify-content:space-between;align-items:center;padding:14px 26px 0;margin-top:52px}
+.sbar-t{font-size:16px;font-weight:700;color:var(--text0);letter-spacing:-.4px}
+.sbar-r{font-size:11px;color:var(--text0)}
+
+.scroll{position:relative;z-index:10;padding:0 18px 110px;overflow-y:auto;max-height:754px}
+.scroll::-webkit-scrollbar{display:none}
+
+.bnav{position:absolute;bottom:0;left:0;right:0;height:88px;background:rgba(4,9,20,.97);backdrop-filter:blur(28px);border-top:1px solid rgba(255,255,255,.055);display:flex;align-items:flex-start;padding-top:10px;z-index:200}
+.bni{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 0}
+.bni-icon{font-size:21px;line-height:1}
+.bni-lbl{font-size:9px;font-weight:500;color:var(--text2)}
+.bni.on .bni-lbl{color:var(--gold);font-weight:700}
+.bni.on .bni-icon{transform:translateY(-2px)}
+.fab-w{flex:1;display:flex;justify-content:center;align-items:flex-start}
+.fab{width:54px;height:54px;background:linear-gradient(135deg,var(--gold),#C28B00);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 5px 20px rgba(194,139,0,.5);margin-top:-10px;cursor:pointer}
+
+/* ── ANIMS ── */
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.6)}}
+@keyframes blink{50%{opacity:0}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popIn{0%{transform:scale(.8);opacity:0}70%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
+@keyframes ringPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.016)}}
+
+/* ── MODE SWITCH ── */
+.mode-sw{display:flex;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:3px;margin-bottom:20px}
+.ms{flex:1;padding:9px;border-radius:11px;font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all .2s;color:var(--text2)}
+.ms.on{background:rgba(167,139,250,.22);color:var(--purple2);box-shadow:0 2px 8px rgba(167,139,250,.2)}
+
+/* ══════════════════════════════════
+   RING STAGE — full width, no card above
+══════════════════════════════════ */
+.ring-stage{
+  display:flex;flex-direction:column;align-items:center;
+  position:relative;
+  /* generous vertical space so glow isn't clipped */
+  padding:8px 0 20px;
+}
+
+/* wide ambient behind the ring — nothing above to block it */
+.ring-ambient{
+  position:absolute;
+  width:340px;height:340px;
+  border-radius:50%;
+  top:50%;left:50%;transform:translate(-50%,-50%);
+  pointer-events:none;
+  filter:blur(48px);
+  opacity:0;
+  transition:background 2s ease;
+}
+
+.ring-wrap{position:relative;width:272px;height:272px}
+.ring-wrap svg{transform:rotate(-90deg)}
+
+.ring-glow-ring{
+  position:absolute;inset:-30px;border-radius:50%;pointer-events:none;
+  transition:box-shadow 1.5s ease;
+}
+
+.ring-inner{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.ring-phase-lbl{
+  font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  margin-bottom:4px;transition:color 2s ease;opacity:.8;
+}
+.ring-time{
+  font-size:72px;font-weight:200;color:var(--text0);
+  letter-spacing:-4px;line-height:1;font-variant-numeric:tabular-nums;
+  transition:font-weight .8s ease;
+}
+.ring-colon{animation:blink 1s step-end infinite}
+.ring-paused .ring-colon{animation:none;opacity:.3}
+.ring-sub{font-size:12px;margin-top:4px;letter-spacing:.05em;transition:color 2s ease;color:var(--text2)}
+.ring-pct{font-size:15px;font-weight:700;margin-top:3px;transition:color 2s ease}
+
+/* phase dots */
+.phase-dots{display:flex;gap:8px;margin-top:16px;align-items:center}
+.ph-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.1);transition:all .6s ease}
+.ph-dot.ph1{background:var(--purple);border-color:rgba(167,139,250,.5);box-shadow:0 0 8px rgba(167,139,250,.5)}
+.ph-dot.ph2{background:var(--gold);border-color:rgba(245,200,66,.5);box-shadow:0 0 8px rgba(245,200,66,.5)}
+.ph-dot.ph3{background:var(--coral);border-color:rgba(255,123,107,.5);box-shadow:0 0 8px rgba(255,123,107,.5)}
+.ph-dot.ap{transform:scale(1.55)}
+.ph-sep{width:20px;height:1px;background:rgba(255,255,255,.1)}
+
+/* phase badge */
+.phase-badge{
+  display:flex;align-items:center;gap:6px;
+  font-size:11px;font-weight:600;
+  padding:5px 14px;border-radius:99px;
+  margin-top:12px;border:1px solid;
+  transition:all 2s ease;
+}
+
+/* ── TASK CARD (now BELOW the ring) ── */
+.task-card-below{
+  display:flex;align-items:center;gap:10px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:16px;
+  padding:12px 15px;
+  margin-bottom:16px;
+  transition:background 2s ease, border-color 2s ease;
+}
+.tc-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;animation:pulse 1.8s ease-in-out infinite}
+.tc-label{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;flex-shrink:0;opacity:.8}
+.tc-name{flex:1;font-size:13px;font-weight:600;color:var(--text0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tc-dur{font-size:11px;color:var(--text2);flex-shrink:0}
+
+/* ── TOMATOES ── */
+.tomato-row{display:flex;justify-content:center;gap:9px;margin-bottom:16px}
+.tom{width:11px;height:11px;border-radius:50%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.1);transition:all .3s}
+.tom.done{background:var(--purple);border-color:rgba(167,139,250,.6);box-shadow:0 0 10px rgba(167,139,250,.5)}
+.tom.cur{background:var(--gold);border-color:rgba(245,200,66,.6);box-shadow:0 0 10px rgba(245,200,66,.5)}
+
+/* ── ACTIONS ── */
+.acts{display:flex;gap:9px;margin-bottom:14px}
+.fa{padding:15px;border-radius:17px;border:none;cursor:pointer;font-size:14px;font-weight:700;transition:all .22s;font-family:'Inter',sans-serif;flex:1}
+.fa-main{color:#fff;flex:2;transition:background 2s ease,box-shadow .3s ease}
+.fa-main:hover{transform:translateY(-1px)}
+.fa-sec{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:var(--text1)}
+.fa-sec:hover{background:rgba(255,255,255,.13)}
+.fa-stop{background:rgba(255,123,107,.14);border:1px solid rgba(255,123,107,.22);color:var(--coral)}
+
+/* ── STATS ── */
+.foc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.fsc{background:rgba(255,255,255,.04);border:1px solid var(--bd);border-radius:14px;padding:12px;text-align:center}
+.fsc-v{font-size:20px;font-weight:800;letter-spacing:-.5px;margin-bottom:2px}
+.fsc-l{font-size:10px;color:var(--text2)}
+
+/* ── DAD SYNC ── */
+.dad-sync{background:rgba(61,214,140,.055);border:1px solid rgba(61,214,140,.13);border-radius:16px;padding:13px 15px;display:flex;align-items:center;gap:11px;margin-bottom:14px}
+.ds-av{font-size:22px}
+.ds-info{flex:1}
+.ds-name{font-size:13px;font-weight:600;color:var(--text0)}
+.ds-sub{font-size:11px;color:var(--text2);margin-top:1px}
+.ds-right{display:flex;align-items:center;gap:7px}
+.live-dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 1.8s ease-in-out infinite}
+.ds-time{font-size:17px;font-weight:700;color:var(--text0);letter-spacing:-1px}
+
+/* ── TASK PICKER ── */
+.sec-t{font-size:14px;font-weight:700;color:var(--text0);letter-spacing:-.3px;margin-bottom:10px}
+.tp-item{display:flex;align-items:center;gap:10px;padding:11px 14px;background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:14px;margin-bottom:7px;cursor:pointer;transition:all .2s}
+.tp-item:hover{border-color:rgba(255,255,255,.13)}
+.tp-item.sel{background:rgba(167,139,250,.09);border-color:rgba(167,139,250,.33)}
+
+/* ── DEMO BAR ── */
+.demo-bar{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:14px;margin-bottom:14px}
+.demo-lbl{font-size:10px;font-weight:700;color:var(--text2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.demo-phases{display:flex;gap:7px}
+.dpb{flex:1;padding:9px 4px;border:1px solid var(--bd);border-radius:11px;font-size:11px;font-weight:600;cursor:pointer;text-align:center;background:rgba(255,255,255,.04);color:var(--text1);transition:all .2s;font-family:'Inter',sans-serif;line-height:1.4}
+.dpb:hover{background:rgba(255,255,255,.08)}
+.dpb.ph1{border-color:rgba(167,139,250,.3);color:var(--purple2)}
+.dpb.ph2{border-color:rgba(245,200,66,.3);color:var(--gold)}
+.dpb.ph3{border-color:rgba(255,123,107,.3);color:var(--coral2)}
+.dpb.phg{border-color:rgba(61,214,140,.3);color:var(--green2)}
+
+/* ── OVERLAYS ── */
+.overlay{position:absolute;inset:0;z-index:400;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;backdrop-filter:blur(20px);animation:fadeUp .35s ease}
+.ov-c{background:linear-gradient(160deg,rgba(8,14,30,.97),rgba(12,20,46,.97))}
+.ov-b{background:linear-gradient(160deg,rgba(4,18,14,.97),rgba(8,24,18,.97))}
+.ov-icon{font-size:76px;margin-bottom:14px;animation:popIn .5s ease}
+.ov-title{font-size:26px;font-weight:800;color:var(--text0);letter-spacing:-.7px;margin-bottom:7px;text-align:center}
+.ov-sub{font-size:13px;color:var(--text1);text-align:center;line-height:1.65;margin-bottom:22px}
+.ov-box{background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.22);border-radius:16px;padding:14px 18px;margin-bottom:22px;width:100%;text-align:center}
+.ov-box-name{font-size:15px;font-weight:600;color:var(--text0);margin-bottom:3px}
+.ov-box-meta{font-size:12px;color:var(--text2)}
+.ov-btns{display:flex;flex-direction:column;gap:9px;width:100%}
+.ov-btn{padding:16px;border:none;border-radius:17px;font-size:15px;font-weight:700;cursor:pointer;transition:all .22s;font-family:'Inter',sans-serif;text-align:center}
+.ov-green{background:linear-gradient(135deg,#0A5C38,#0D7A48);color:#fff;box-shadow:0 6px 22px rgba(10,92,56,.5)}
+.ov-green:hover{transform:translateY(-1px)}
+.ov-purple{background:rgba(167,139,250,.18);border:1px solid rgba(167,139,250,.3);color:var(--purple2)}
+.ov-ghost{background:transparent;border:none;color:var(--text2);font-size:13px;font-weight:400;padding:8px}
+.break-t{font-size:60px;font-weight:200;color:var(--green);letter-spacing:-3px;margin:10px 0 22px;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="shell" id="shell">
+  <canvas class="sf" id="sf"></canvas>
+  <div class="orb o1" id="orb1"></div>
+  <div class="orb o2"></div>
+  <div class="orb o3" id="orb3"></div>
+  <div class="notch"><div class="n-cam"></div><div class="n-pill"></div><div class="n-cam"></div></div>
+  <div class="sbar"><div class="sbar-t" id="clockEl">21:14</div><div class="sbar-r">▲▲▲ &nbsp;🔋 92%</div></div>
+
+  <div class="scroll">
+    <div style="padding:12px 0 0">
+
+      <!-- MODE SWITCH -->
+      <div class="mode-sw">
+        <div class="ms on">📋 任务专注</div>
+        <div class="ms">🍅 自由番茄</div>
+      </div>
+
+      <!-- ══ RING STAGE — nothing above, glow fully open ══ -->
+      <div class="ring-stage" id="ringStage">
+        <div class="ring-ambient" id="ringAmbient"></div>
+
+        <div class="ring-wrap" id="ringWrap">
+          <div class="ring-glow-ring" id="ringGlowRing"></div>
+          <svg width="272" height="272" viewBox="0 0 272 272" id="ringSvg">
+            <defs>
+              <linearGradient id="g-ph1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#C4B5FD"/><stop offset="100%" style="stop-color:#4C1D95"/>
+              </linearGradient>
+              <linearGradient id="g-ph2" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#FFE085"/><stop offset="100%" style="stop-color:#8A6800"/>
+              </linearGradient>
+              <linearGradient id="g-ph3" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#FFA598"/><stop offset="100%" style="stop-color:#B91C1C"/>
+              </linearGradient>
+              <linearGradient id="g-t12" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#E0C86A"/><stop offset="100%" style="stop-color:#7C3AED"/>
+              </linearGradient>
+              <linearGradient id="g-t23" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#FFB080"/><stop offset="100%" style="stop-color:#B45309"/>
+              </linearGradient>
+              <filter id="dotGlow" x="-120%" y="-120%" width="340%" height="340%">
+                <feGaussianBlur stdDeviation="5" result="b"/>
+                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <filter id="ringBlur"><feGaussianBlur stdDeviation="3.5"/></filter>
+            </defs>
+            <!-- tick ring outside -->
+            <circle fill="none" stroke="rgba(255,255,255,.025)" stroke-width="1" cx="136" cy="136" r="126"/>
+            <!-- main track -->
+            <circle fill="none" stroke="rgba(255,255,255,.045)" stroke-width="11" cx="136" cy="136" r="120"/>
+            <!-- inner ghost -->
+            <circle fill="none" stroke="rgba(255,255,255,.016)" stroke-width="1" cx="136" cy="136" r="107"/>
+            <!-- glow copy -->
+            <circle id="progressGlow" fill="none" stroke="url(#g-ph1)" stroke-width="18" stroke-linecap="round"
+              cx="136" cy="136" r="120"
+              stroke-dasharray="754" stroke-dashoffset="754"
+              opacity=".3" filter="url(#ringBlur)"
+              style="transition:stroke-dashoffset .35s linear"/>
+            <!-- main ring -->
+            <circle id="progressRing" fill="none" stroke="url(#g-ph1)" stroke-width="11" stroke-linecap="round"
+              cx="136" cy="136" r="120"
+              stroke-dasharray="754" stroke-dashoffset="754"
+              style="transition:stroke-dashoffset .35s linear;filter:drop-shadow(0 0 9px rgba(167,139,250,.65))"/>
+            <!-- head dot -->
+            <circle id="progressDot" cx="136" cy="16" r="7" fill="#C4B5FD"
+              filter="url(#dotGlow)" style="opacity:0;transition:fill 2s ease,r .4s ease"/>
+          </svg>
+
+          <div class="ring-inner" id="ringInner">
+            <div class="ring-phase-lbl" id="ringPhaseLbl" style="color:var(--purple)">专注时间</div>
+            <div class="ring-time" id="ringTime">
+              <span id="ringM">25</span><span class="ring-colon" id="ringColon">:</span><span id="ringS">00</span>
+            </div>
+            <div class="ring-sub" id="ringSub">点击开始</div>
+            <div class="ring-pct" id="ringPct" style="color:var(--purple)"></div>
+          </div>
+        </div>
+
+        <!-- phase dots -->
+        <div class="phase-dots">
+          <div class="ph-dot ph1 ap" id="pd1"></div>
+          <div class="ph-sep"></div>
+          <div class="ph-dot" id="pd2"></div>
+          <div class="ph-sep"></div>
+          <div class="ph-dot" id="pd3"></div>
+        </div>
+
+        <!-- phase badge -->
+        <div class="phase-badge" id="phaseBadge"
+          style="color:var(--purple2);border-color:rgba(167,139,250,.25);background:rgba(167,139,250,.08)">
+          <span id="pbIcon">🌙</span>
+          <span id="pbText">沉静专注中</span>
+        </div>
+      </div>
+      <!-- ══ END RING STAGE ══ -->
+
+      <!-- TASK CARD — moved below ring -->
+      <div class="task-card-below" id="taskCardBelow">
+        <div class="tc-dot" id="tcDot" style="background:var(--purple)"></div>
+        <div class="tc-label" id="tcLabel" style="color:var(--purple2)">数学</div>
+        <div class="tc-name" id="tcName">练习册第5页，15道计算题</div>
+        <div class="tc-dur">约 20m</div>
+      </div>
+
+      <!-- TOMATOES -->
+      <div class="tomato-row" id="tomatoRow"></div>
+
+      <!-- DEMO CONTROLS -->
+      <div class="demo-bar">
+        <div class="demo-lbl">预览阶段效果</div>
+        <div class="demo-phases">
+          <button class="dpb ph1" onclick="jumpTo(1)">🌙<br>第一段<br><span style="font-size:10px;opacity:.65">25→10m</span></button>
+          <button class="dpb ph2" onclick="jumpTo(2)">🔥<br>第二段<br><span style="font-size:10px;opacity:.65">10→5m</span></button>
+          <button class="dpb ph3" onclick="jumpTo(3)">⚡<br>冲刺段<br><span style="font-size:10px;opacity:.65">5→0m</span></button>
+          <button class="dpb phg" onclick="triggerDone()">🎉<br>完成弹窗</button>
+        </div>
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="acts">
+        <button class="fa fa-stop" id="btnStop" onclick="stopFocus()" style="display:none">✕ 放弃</button>
+        <button class="fa fa-main" id="btnMain" onclick="mainClick()"
+          style="background:linear-gradient(135deg,#7C3AED,#4C1D95);box-shadow:0 5px 20px rgba(76,29,149,.5)">▶  开始专注</button>
+        <button class="fa fa-sec" id="btnPause" onclick="pauseClick()" style="display:none">⏸ 暂停</button>
+      </div>
+
+      <!-- STATS -->
+      <div class="foc-stats">
+        <div class="fsc"><div class="fsc-v" id="fsTom" style="color:var(--purple)">0</div><div class="fsc-l">今日番茄</div></div>
+        <div class="fsc"><div class="fsc-v" id="fsMins" style="color:var(--green)">0m</div><div class="fsc-l">专注时长</div></div>
+        <div class="fsc"><div class="fsc-v" style="color:var(--gold)">7🔥</div><div class="fsc-l">连续天数</div></div>
+      </div>
+
+      <!-- DAD SYNC -->
+      <div class="dad-sync">
+        <div class="ds-av">👨</div>
+        <div class="ds-info">
+          <div class="ds-name">爸爸也在专注</div>
+          <div class="ds-sub">工作中 · 谁今天专注更久？</div>
+        </div>
+        <div class="ds-right">
+          <div class="live-dot"></div>
+          <div class="ds-time" id="dadTime">32:18</div>
+        </div>
+      </div>
+
+      <!-- TASK PICKER -->
+      <div style="margin-bottom:14px">
+        <div class="sec-t">选择要专注的任务</div>
+        <div class="tp-item sel" onclick="selectTask(this,0)">
+          <div style="width:9px;height:9px;border-radius:50%;background:var(--purple);flex-shrink:0;box-shadow:0 0 8px var(--purple)"></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:700;color:var(--text0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">练习册第5页，15道计算题</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px">数学 · 约 20 分钟</div>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:var(--purple2);background:rgba(167,139,250,.15);border-radius:99px;padding:3px 10px;flex-shrink:0">当前</div>
+        </div>
+        <div class="tp-item" onclick="selectTask(this,1)">
+          <div style="width:9px;height:9px;border-radius:50%;background:#6EEDB0;flex-shrink:0"></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:500;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">背诵单词 Unit 7，共 20 个</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px">英语 · 约 15 分钟</div>
+          </div>
+        </div>
+        <div class="tp-item" onclick="selectTask(this,2)">
+          <div style="width:9px;height:9px;border-radius:50%;background:#FFD060;flex-shrink:0"></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:500;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">日记一篇，不少于 200 字</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px">语文 · 约 40 分钟</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bnav">
+    <div class="bni"><div class="bni-icon">🏠</div><div class="bni-lbl">首页</div></div>
+    <div class="bni"><div class="bni-icon">📋</div><div class="bni-lbl">任务</div></div>
+    <div class="fab-w"><div class="fab">⏱️</div></div>
+    <div class="bni bni on"><div class="bni-icon">🎯</div><div class="bni-lbl" style="color:var(--gold);font-weight:700">专注</div></div>
+    <div class="bni"><div class="bni-icon">📓</div><div class="bni-lbl">时光机</div></div>
+  </div>
+
+  <!-- COMPLETION -->
+  <div class="overlay ov-c" id="ovC" style="display:none">
+    <div class="ov-icon">🎉</div>
+    <div class="ov-title">番茄完成！</div>
+    <div class="ov-sub">25 分钟专注结束<br>你刚才在做这项任务：</div>
+    <div class="ov-box">
+      <div class="ov-box-name" id="ovName">练习册第5页，15道计算题</div>
+      <div class="ov-box-meta">数学 · 已专注 25 分钟</div>
+    </div>
+    <div class="ov-btns">
+      <button class="ov-btn ov-green" onclick="confirmDone()">✅ 这项任务完成了！</button>
+      <button class="ov-btn ov-purple" onclick="closeOvC()">⏱ 还没完，再来一个番茄</button>
+      <button class="ov-btn ov-ghost" onclick="closeOvC();startBreak()">跳过确认，直接休息</button>
+    </div>
+  </div>
+
+  <!-- BREAK -->
+  <div class="overlay ov-b" id="ovB" style="display:none">
+    <div class="ov-icon">☕</div>
+    <div class="ov-title">休息 5 分钟</div>
+    <div class="ov-sub">站起来动一动，喝杯水<br>让大脑好好放松</div>
+    <div class="break-t" id="breakT">05:00</div>
+    <div class="ov-btns">
+      <button class="ov-btn ov-purple" onclick="closeBreak()">跳过休息，继续下一个</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STARFIELD ──
+const sf=document.getElementById('sf'),ctx=sf.getContext('2d');
+sf.width=393;sf.height=900;
+const stars=Array.from({length:160},()=>({x:Math.random()*393,y:Math.random()*900,r:.1+Math.random()*1.15,a:Math.random(),sp:.002+Math.random()*.009,ph:Math.random()*Math.PI*2}));
+function drawSF(t){ctx.clearRect(0,0,393,900);stars.forEach(s=>{const a=s.a*(.18+.82*Math.sin(t*s.sp+s.ph));ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${a})`;ctx.fill()});requestAnimationFrame(drawSF)}
+requestAnimationFrame(drawSF);
+
+// ── CLOCK ──
+function tick2(){const n=new Date();document.getElementById('clockEl').textContent=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')}
+tick2();setInterval(tick2,15000);
+
+// ── DAD TIMER ──
+let dadS=32*60+18;
+setInterval(()=>{dadS++;const m=Math.floor(dadS/60),s=dadS%60;document.getElementById('dadTime').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')},1000);
+
+// ── PHASE SYSTEM ──
+const TOTAL=25*60, BREAK=5*60;
+const TASKS_DATA=[
+  {name:'练习册第5页，15道计算题',subj:'数学',dur:'20m',color:'#A78BFA',gColor:'rgba(167,139,250,.18)',tColor:'var(--purple2)'},
+  {name:'背诵单词 Unit 7，共 20 个',subj:'英语',dur:'15m',color:'#6EEDB0',gColor:'rgba(61,214,140,.15)',tColor:'#6EEDB0'},
+  {name:'日记一篇，不少于 200 字',subj:'语文',dur:'40m',color:'#FFD060',gColor:'rgba(255,200,60,.15)',tColor:'#FFD060'},
+];
+let curTask=0;
+
+const PH={
+  1:{grad:'url(#g-ph1)',gc:'rgba(167,139,250,.7)',gs:'0 0 55px rgba(167,139,250,.22),0 0 110px rgba(167,139,250,.09)',amb:'rgba(167,139,250,.08)',orb:'rgba(167,139,250,.09)',dot:'#C4B5FD',dg:'rgba(167,139,250,.85)',dr:7,pc:'var(--purple)',sc:'var(--text2)',lbl:'专注时间',lc:'var(--purple)',bt:'沉静专注中',bi:'🌙',bb:'rgba(167,139,250,.08)',bbd:'rgba(167,139,250,.25)',bc:'var(--purple2)',ra:'',bg:'linear-gradient(135deg,#7C3AED,#4C1D95)',bs:'0 5px 20px rgba(76,29,149,.5)',fw:'200'},
+  2:{grad:'url(#g-ph2)',gc:'rgba(245,200,66,.7)',gs:'0 0 55px rgba(245,200,66,.24),0 0 110px rgba(245,200,66,.1)',amb:'rgba(245,200,66,.07)',orb:'rgba(245,200,66,.08)',dot:'#FFE085',dg:'rgba(245,200,66,.9)',dr:9,pc:'var(--gold)',sc:'var(--gold)',lbl:'加速冲刺',lc:'var(--gold)',bt:'快完成了，坚持！',bi:'🔥',bb:'rgba(245,200,66,.09)',bbd:'rgba(245,200,66,.3)',bc:'var(--gold2)',ra:'',bg:'linear-gradient(135deg,#B8920A,#7A5E00)',bs:'0 5px 20px rgba(138,104,0,.5)',fw:'300'},
+  3:{grad:'url(#g-ph3)',gc:'rgba(255,123,107,.75)',gs:'0 0 62px rgba(255,123,107,.3),0 0 124px rgba(255,123,107,.12)',amb:'rgba(255,100,80,.09)',orb:'rgba(255,100,80,.09)',dot:'#FFA598',dg:'rgba(255,123,107,.95)',dr:11,pc:'var(--coral)',sc:'var(--coral)',lbl:'最后冲刺！',lc:'var(--coral)',bt:'全力以赴！',bi:'⚡',bb:'rgba(255,123,107,.1)',bbd:'rgba(255,123,107,.32)',bc:'var(--coral2)',ra:'ringPulse 1.5s ease-in-out infinite',bg:'linear-gradient(135deg,#DC2626,#991B1B)',bs:'0 5px 20px rgba(185,28,28,.5)',fw:'400'},
+  t12:{grad:'url(#g-t12)',gc:'rgba(200,175,100,.68)',gs:'0 0 55px rgba(200,175,100,.22),0 0 110px rgba(200,175,100,.09)',amb:'rgba(200,175,100,.07)',orb:'rgba(200,175,100,.08)',dot:'#E8CE70',dg:'rgba(220,190,80,.88)',dr:8,pc:'var(--gold)',sc:'var(--text1)',lbl:'加速冲刺',lc:'var(--gold)',bt:'进入加速阶段…',bi:'✨',bb:'rgba(220,185,80,.09)',bbd:'rgba(220,185,80,.28)',bc:'var(--gold2)',ra:'',bg:'linear-gradient(135deg,#9A7A10,#5C4800)',bs:'0 5px 20px rgba(100,80,0,.5)',fw:'250'},
+  t23:{grad:'url(#g-t23)',gc:'rgba(255,150,90,.7)',gs:'0 0 58px rgba(255,150,90,.26),0 0 116px rgba(255,150,90,.11)',amb:'rgba(255,130,80,.08)',orb:'rgba(255,130,80,.09)',dot:'#FF9060',dg:'rgba(255,120,60,.92)',dr:10,pc:'var(--coral)',sc:'var(--coral2)',lbl:'冲刺准备',lc:'var(--coral)',bt:'进入冲刺阶段！',bi:'🔥',bb:'rgba(255,120,80,.1)',bbd:'rgba(255,120,80,.3)',bc:'var(--coral2)',ra:'',bg:'linear-gradient(135deg,#C05020,#8B2500)',bs:'0 5px 20px rgba(160,60,0,.5)',fw:'350'},
+};
+
+function getPhaseKey(left){
+  if(left>10*60+90) return 1;
+  if(left>10*60)    return 't12';
+  if(left>5*60+60)  return 2;
+  if(left>5*60)     return 't23';
+  return 3;
+}
+
+let lastPK=null;
+function applyPhase(left,force=false){
+  const pk=getPhaseKey(left);
+  if(pk===lastPK&&!force)return;
+  lastPK=pk;
+  const c=PH[pk];
+
+  document.getElementById('progressRing').setAttribute('stroke',c.grad);
+  document.getElementById('progressGlow').setAttribute('stroke',c.grad);
+  document.getElementById('progressRing').style.filter=`drop-shadow(0 0 9px ${c.gc})`;
+  document.getElementById('ringGlowRing').style.boxShadow=fState==='running'?c.gs:'';
+  document.getElementById('ringAmbient').style.background=`radial-gradient(circle,${c.amb} 0%,transparent 70%)`;
+  document.getElementById('orb1').style.background=`radial-gradient(circle,${c.orb} 0%,transparent 70%)`;
+  document.getElementById('orb3').style.background=`radial-gradient(circle,${c.orb} 0%,transparent 70%)`;
+
+  const dot=document.getElementById('progressDot');
+  dot.setAttribute('fill',c.dot);
+  dot.setAttribute('r',c.dr);
+  dot.style.filter=`drop-shadow(0 0 ${c.dr+3}px ${c.dg})`;
+
+  document.getElementById('ringPhaseLbl').textContent=c.lbl;
+  document.getElementById('ringPhaseLbl').style.color=c.lc;
+  document.getElementById('ringPct').style.color=c.pc;
+  document.getElementById('ringSub').style.color=fState==='running'?c.sc:'var(--text2)';
+  document.getElementById('ringTime').style.fontWeight=c.fw;
+
+  document.getElementById('phaseBadge').style.background=c.bb;
+  document.getElementById('phaseBadge').style.borderColor=c.bbd;
+  document.getElementById('phaseBadge').style.color=c.bc;
+  document.getElementById('pbIcon').textContent=c.bi;
+  document.getElementById('pbText').textContent=c.bt;
+
+  document.getElementById('ringWrap').style.animation=fState==='running'&&c.ra?c.ra:'';
+  document.getElementById('btnMain').style.background=c.bg;
+  document.getElementById('btnMain').style.boxShadow=c.bs;
+
+  // phase dots
+  const pn=pk===1||pk==='t12'?1:pk===2||pk==='t23'?2:3;
+  document.getElementById('pd1').className='ph-dot ph1'+(pn>=1?' ap':'');
+  document.getElementById('pd2').className='ph-dot'+(pn>=2?' ph2 ap':'');
+  document.getElementById('pd3').className='ph-dot'+(pn>=3?' ph3 ap':'');
+}
+
+// ── FOCUS ENGINE ──
+let fLeft=TOTAL,fState='idle',fInt=null,bLeft=BREAK,tCnt=0,minsDone=0;
+
+function updateRing(){
+  const m=String(Math.floor(fLeft/60)).padStart(2,'0'),s=String(fLeft%60).padStart(2,'0');
+  document.getElementById('ringM').textContent=m;
+  document.getElementById('ringS').textContent=s;
+  const prog=1-fLeft/TOTAL,circ=754;
+  document.getElementById('progressRing').style.strokeDashoffset=circ*(1-prog);
+  document.getElementById('progressGlow').style.strokeDashoffset=circ*(1-prog);
+  const pct=Math.round(prog*100);
+  document.getElementById('ringPct').textContent=pct>0?pct+'%':'';
+  if(prog>0.005){
+    const ang=prog*2*Math.PI-Math.PI/2,cx=136,cy=136,r=120;
+    const dx=cx+r*Math.cos(ang),dy=cy+r*Math.sin(ang);
+    document.getElementById('progressDot').setAttribute('cx',dx.toFixed(2));
+    document.getElementById('progressDot').setAttribute('cy',dy.toFixed(2));
+    document.getElementById('progressDot').style.opacity='1';
+  } else {
+    document.getElementById('progressDot').style.opacity='0';
+  }
+  applyPhase(fLeft);
+  document.getElementById('ringAmbient').style.opacity=fState==='running'?'1':'0';
+}
+
+function mainClick(){if(fState==='idle')startFocus()}
+
+function startFocus(){
+  fState='running';
+  document.getElementById('btnMain').style.display='none';
+  document.getElementById('btnPause').style.display='flex';
+  document.getElementById('btnStop').style.display='flex';
+  document.getElementById('ringSub').textContent='专注中…';
+  document.getElementById('progressDot').style.opacity='1';
+  lastPK=null;applyPhase(fLeft,true);
+  document.getElementById('ringAmbient').style.opacity='1';
+  clearInterval(fInt);fInt=setInterval(()=>{
+    if(fState!=='running')return;
+    fLeft--;minsDone=Math.round((TOTAL-fLeft)/60);
+    document.getElementById('fsMins').textContent=minsDone>59?Math.round(minsDone/60)+'h':minsDone+'m';
+    updateRing();
+    if(fLeft<=0){clearInterval(fInt);onComplete()}
+  },1000);
+}
+
+function pauseClick(){
+  if(fState==='running'){
+    fState='paused';
+    document.getElementById('btnPause').textContent='▶ 继续';
+    document.getElementById('ringSub').textContent='已暂停';
+    document.getElementById('ringInner').classList.add('ring-paused');
+    document.getElementById('ringAmbient').style.opacity='.3';
+    document.getElementById('ringWrap').style.animation='';
+    document.getElementById('ringGlowRing').style.boxShadow='';
+  } else if(fState==='paused'){
+    fState='running';
+    document.getElementById('btnPause').textContent='⏸ 暂停';
+    document.getElementById('ringSub').textContent='专注中…';
+    document.getElementById('ringInner').classList.remove('ring-paused');
+    document.getElementById('ringAmbient').style.opacity='1';
+    lastPK=null;applyPhase(fLeft,true);
+  }
+}
+
+function stopFocus(){
+  clearInterval(fInt);fState='idle';fLeft=TOTAL;lastPK=null;
+  resetRing();
+}
+
+function resetRing(){
+  document.getElementById('btnMain').style.display='flex';
+  document.getElementById('btnPause').style.display='none';
+  document.getElementById('btnStop').style.display='none';
+  document.getElementById('btnPause').textContent='⏸ 暂停';
+  document.getElementById('ringM').textContent='25';
+  document.getElementById('ringS').textContent='00';
+  document.getElementById('ringSub').textContent='点击开始';
+  document.getElementById('ringSub').style.color='var(--text2)';
+  document.getElementById('ringPct').textContent='';
+  document.getElementById('progressRing').style.strokeDashoffset='754';
+  document.getElementById('progressGlow').style.strokeDashoffset='754';
+  document.getElementById('progressDot').style.opacity='0';
+  document.getElementById('ringWrap').style.animation='';
+  document.getElementById('ringAmbient').style.opacity='0';
+  document.getElementById('ringGlowRing').style.boxShadow='';
+  document.getElementById('ringInner').classList.remove('ring-paused');
+  document.getElementById('ringTime').style.fontWeight='200';
+  // back to ph1 defaults
+  document.getElementById('progressRing').setAttribute('stroke','url(#g-ph1)');
+  document.getElementById('progressGlow').setAttribute('stroke','url(#g-ph1)');
+  document.getElementById('progressRing').style.filter='drop-shadow(0 0 9px rgba(167,139,250,.65))';
+  document.getElementById('ringPhaseLbl').textContent='专注时间';
+  document.getElementById('ringPhaseLbl').style.color='var(--purple)';
+  document.getElementById('ringPct').style.color='var(--purple)';
+  document.getElementById('phaseBadge').style.background='rgba(167,139,250,.08)';
+  document.getElementById('phaseBadge').style.borderColor='rgba(167,139,250,.25)';
+  document.getElementById('phaseBadge').style.color='var(--purple2)';
+  document.getElementById('pbIcon').textContent='🌙';
+  document.getElementById('pbText').textContent='沉静专注中';
+  document.getElementById('pd1').className='ph-dot ph1 ap';
+  document.getElementById('pd2').className='ph-dot';
+  document.getElementById('pd3').className='ph-dot';
+  document.getElementById('btnMain').style.background='linear-gradient(135deg,#7C3AED,#4C1D95)';
+  document.getElementById('btnMain').style.boxShadow='0 5px 20px rgba(76,29,149,.5)';
+  document.getElementById('orb1').style.background='radial-gradient(circle,rgba(167,139,250,.09) 0%,transparent 70%)';
+  document.getElementById('orb3').style.background='';
+}
+
+function onComplete(){
+  tCnt++;document.getElementById('fsTom').textContent=tCnt;
+  renderTomatoes();
+  document.getElementById('ovC').style.display='flex';
+}
+function confirmDone(){document.getElementById('ovC').style.display='none';fLeft=TOTAL;resetRing();startBreak()}
+function closeOvC(){document.getElementById('ovC').style.display='none';fLeft=TOTAL;resetRing()}
+function startBreak(){
+  bLeft=BREAK;document.getElementById('ovB').style.display='flex';
+  clearInterval(fInt);
+  fInt=setInterval(()=>{
+    bLeft--;
+    const m=String(Math.floor(bLeft/60)).padStart(2,'0'),s=String(bLeft%60).padStart(2,'0');
+    document.getElementById('breakT').textContent=m+':'+s;
+    if(bLeft<=0){clearInterval(fInt);closeBreak()}
+  },1000);
+}
+function closeBreak(){document.getElementById('ovB').style.display='none';fLeft=TOTAL;resetRing()}
+
+function renderTomatoes(){
+  const row=document.getElementById('tomatoRow');row.innerHTML='';
+  const total=Math.max(4,tCnt+1);
+  for(let i=0;i<total;i++){const d=document.createElement('div');d.className='tom'+(i<tCnt?' done':i===tCnt?' cur':'');row.appendChild(d)}
+}
+renderTomatoes();
+
+// ── DEMO: jump ──
+function jumpTo(ph){
+  if(ph===1)fLeft=18*60;
+  if(ph===2)fLeft=7*60;
+  if(ph===3)fLeft=2*60;
+  fState='running';lastPK=null;
+  document.getElementById('btnMain').style.display='none';
+  document.getElementById('btnPause').style.display='flex';
+  document.getElementById('btnStop').style.display='flex';
+  document.getElementById('ringSub').textContent='专注中…';
+  document.getElementById('progressDot').style.opacity='1';
+  updateRing();
+  clearInterval(fInt);fInt=setInterval(()=>{
+    if(fState!=='running')return;
+    fLeft--;updateRing();
+    if(fLeft<=0){clearInterval(fInt);onComplete()}
+  },1000);
+}
+function triggerDone(){clearInterval(fInt);fState='idle';onComplete()}
+
+// ── BREATHING AMBIENT ──
+let breathT=0;
+(function breathLoop(ts){
+  breathT=ts;
+  if(fState==='running'){
+    const pk=lastPK||1;
+    let dur,amp;
+    if(pk===1){dur=4000;amp=.065}
+    else if(pk==='t12'){dur=3200;amp=.08}
+    else if(pk===2){dur=2500;amp=.09}
+    else if(pk==='t23'){dur=1900;amp=.105}
+    else{dur=1400;amp=.13}
+    const o=.04+(.5+.5*Math.sin(ts/dur*Math.PI*2))*amp;
+    document.getElementById('ringAmbient').style.opacity=o;
+  }
+  requestAnimationFrame(breathLoop);
+})();
+
+// ── TASK PICKER ──
+function selectTask(el,idx){
+  document.querySelectorAll('.tp-item').forEach(t=>t.classList.remove('sel'));
+  el.classList.add('sel');
+  curTask=idx;
+  const t=TASKS_DATA[idx];
+  document.getElementById('tcDot').style.background=t.color;
+  document.getElementById('tcLabel').textContent=t.subj;
+  document.getElementById('tcLabel').style.color=t.tColor;
+  document.getElementById('tcName').textContent=t.name;
+  document.getElementById('taskCardBelow').style.borderColor=t.gColor;
+  document.getElementById('taskCardBelow').style.background=t.gColor.replace('.15','.06').replace('.18','.05');
+}
+</script>
+</body>
+</html>

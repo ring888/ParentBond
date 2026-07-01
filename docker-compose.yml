@@ -1,0 +1,72 @@
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change_this_root_password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-parentbond}
+      MYSQL_USER: ${MYSQL_USER:-parentbond}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-change_this_password}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./apps/api/src/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$${MYSQL_USER} -p$${MYSQL_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      NODE_ENV: production
+      PORT: 3000
+      HOST: 0.0.0.0
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:8080,http://127.0.0.1:8080}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: ${MYSQL_USER:-parentbond}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-change_this_password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-parentbond}
+      AI_DEFAULT_PROVIDER: ${AI_DEFAULT_PROVIDER:-mimo}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY:-}
+      CLAUDE_MODEL: ${CLAUDE_MODEL:-claude-sonnet-4-6}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+      MIMO_API_KEY: ${MIMO_API_KEY:-}
+      MIMO_BASE_URL: ${MIMO_BASE_URL:-https://api.xiaomimimo.com/v1}
+      MIMO_MODEL: ${MIMO_MODEL:-mimo-v2.5-pro}
+    volumes:
+      - api-uploads:/app/apps/api/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/v1/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080/api/v1}
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  mysql-data:
+  api-uploads:

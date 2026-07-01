@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0D1B3E" />
+    <meta
+      name="description"
+      content="ParentBond 是一个以孩子为主角、父母温柔参与的亲子成长 Web App。"
+    />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <title>ParentBond</title>
+  </head>
+  <body>
+    <div id="root">
+      <main
+        style="
+          min-height: 100vh;
+          display: grid;
+          place-items: center;
+          margin: 0;
+          background:
+            radial-gradient(circle at 78% 12%, rgba(245, 200, 66, 0.16), transparent 260px),
+            radial-gradient(circle at 18% 74%, rgba(167, 139, 250, 0.14), transparent 260px),
+            #0d1b3e;
+          color: #f8f4ee;
+          font-family: Inter, 'Microsoft YaHei', system-ui, sans-serif;
+        "
+      >
+        <section
+          style="
+            width: min(86vw, 360px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 24px;
+            padding: 28px;
+            background: rgba(26, 58, 107, 0.62);
+            box-shadow: 0 30px 90px rgba(0, 0, 0, 0.36);
+          "
+        >
+          <div style="color: #f5c842; font-size: 12px; font-weight: 800; letter-spacing: 0.12em">
+            PARENTBOND
+          </div>
+          <h1 style="margin: 10px 0 8px; font-size: 26px; line-height: 1.18">亲子成长平台</h1>
+          <p style="margin: 0; color: #c8c2b8; font-size: 14px; line-height: 1.7">
+            正在加载星空界面...
+          </p>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

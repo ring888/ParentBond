@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700;800&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg1:#0B1730;
+  --purple:#A78BFA;--purple2:#C4B5FD;--purple3:#4C1D95;
+  --gold:#F5C842;--gold2:#FFE085;
+  --coral:#FF7B6B;--coral2:#FFA598;
+  --green:#3DD68C;--green2:#6EEDB0;--green3:#0A5C38;
+  --text0:#F0EBE3;--text1:#B8B2A8;--text2:#6A6560;
+  --bd:rgba(255,255,255,.07);
+}
+body{
+  font-family:'Inter',-apple-system,sans-serif;
+  background:#040810;
+  display:flex;justify-content:center;align-items:flex-start;
+  min-height:100vh;padding:20px 12px 40px;
+}
+
+/* ── SHELL ── */
+.shell{
+  width:393px;min-height:852px;background:var(--bg1);border-radius:50px;
+  position:relative;overflow:hidden;
+  box-shadow:0 0 0 1px rgba(255,255,255,.09),0 60px 160px rgba(0,0,0,.97),inset 0 1px 0 rgba(255,255,255,.07)
+}
+canvas.sf{position:absolute;inset:0;pointer-events:none;z-index:0}
+.orb{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0}
+.o1{width:300px;height:300px;top:-100px;right:-80px;transition:background 2s ease}
+.o2{width:360px;height:360px;top:260px;left:-120px;background:radial-gradient(circle,rgba(167,139,250,.06) 0%,transparent 70%)}
+.o3{width:240px;height:240px;bottom:80px;right:-70px;transition:background 2s ease}
+
+/* ── NOTCH / STATUS ── */
+.notch{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:126px;height:36px;background:#030710;border-radius:20px;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 10px}
+.n-cam{width:12px;height:12px;background:#0A0F20;border-radius:50%;border:2px solid #0f142a}
+.n-pill{width:56px;height:6px;background:#0A0F20;border-radius:3px}
+.sbar{position:relative;z-index:20;display:flex;justify-content:space-between;align-items:center;padding:14px 26px 0;margin-top:52px}
+.sbar-t{font-size:16px;font-weight:700;color:var(--text0);letter-spacing:-.4px}
+.sbar-r{font-size:11px;color:var(--text0)}
+
+/* ── SCROLL ── */
+.scroll{position:relative;z-index:10;padding:0 18px 110px;overflow-y:auto;max-height:754px}
+.scroll::-webkit-scrollbar{display:none}
+
+/* ── BOTTOM NAV ── */
+.bnav{position:absolute;bottom:0;left:0;right:0;height:88px;background:rgba(4,9,20,.97);backdrop-filter:blur(28px);border-top:1px solid rgba(255,255,255,.055);display:flex;align-items:flex-start;padding-top:10px;z-index:200}
+.bni{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 0;position:relative}
+.bni-icon{font-size:21px;line-height:1}
+.bni-lbl{font-size:9px;font-weight:500;color:var(--text2)}
+.bni.on .bni-lbl{color:var(--gold);font-weight:700}
+.bni.on .bni-icon{transform:translateY(-2px)}
+.bni-dot{position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:4px;height:4px;background:var(--gold);border-radius:50%;box-shadow:0 0 8px var(--gold)}
+.fab-w{flex:1;display:flex;justify-content:center;align-items:flex-start}
+.fab{width:54px;height:54px;background:linear-gradient(135deg,var(--gold),#C28B00);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 5px 20px rgba(194,139,0,.5);margin-top:-10px;cursor:pointer;transition:all .22s}
+
+/* ── ANIMATIONS ── */
+@keyframes breathSlow{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.06)}}
+@keyframes breathMed{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.08)}}
+@keyframes breathFast{0%,100%{opacity:.45;transform:scale(1)}50%{opacity:1;transform:scale(1.12)}}
+@keyframes breathUrgent{0%,100%{opacity:.6;transform:scale(1)}50%{opacity:1;transform:scale(1.18)}}
+@keyframes ringPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.015)}}
+@keyframes blink{50%{opacity:0}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popIn{0%{transform:scale(.8);opacity:0}70%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
+@keyframes sparkle{0%,100%{transform:scale(0);opacity:0}50%{transform:scale(1);opacity:1}}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.6)}}
+
+/* ── MODE SWITCH ── */
+.mode-sw{display:flex;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:3px;margin-bottom:18px}
+.ms{flex:1;padding:9px;border-radius:11px;font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all .2s;color:var(--text2)}
+.ms.on{background:rgba(167,139,250,.22);color:var(--purple2);box-shadow:0 2px 8px rgba(167,139,250,.2)}
+
+/* ── CURRENT TASK CHIP ── */
+.task-chip{background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.18);border-radius:14px;padding:10px 14px;margin-bottom:20px;display:flex;align-items:center;gap:9px;transition:all 2s ease}
+.tc-dot{width:8px;height:8px;border-radius:50%;background:var(--purple);animation:pulse 1.8s ease-in-out infinite;flex-shrink:0}
+.tc-name{font-size:13px;font-weight:600;color:var(--text0);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tc-tag{font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;flex-shrink:0;background:rgba(167,139,250,.15);color:var(--purple2);transition:all 2s ease}
+
+/* ── RING STAGE ── */
+.ring-stage{display:flex;flex-direction:column;align-items:center;padding:0 0 16px;position:relative}
+
+/* outer ambient glow layer (behind everything) */
+.ring-ambient{
+  position:absolute;
+  width:320px;height:320px;
+  border-radius:50%;
+  top:50%;left:50%;transform:translate(-50%,-50%);
+  pointer-events:none;
+  transition:background 2s ease,opacity 1s ease;
+  filter:blur(40px);
+  opacity:0;
+}
+
+/* second outer ring (decorative track) */
+.ring-outer-deco{
+  position:absolute;
+  width:300px;height:300px;
+  border-radius:50%;
+  top:50%;left:50%;transform:translate(-50%,-50%);
+  pointer-events:none;
+  transition:box-shadow 2s ease,border-color 2s ease;
+  border:1px solid rgba(255,255,255,.04);
+}
+
+.ring-wrap{position:relative;width:264px;height:264px}
+.ring-wrap svg{transform:rotate(-90deg)}
+
+/* glow ring around SVG */
+.ring-glow-ring{
+  position:absolute;inset:-28px;border-radius:50%;pointer-events:none;
+  transition:box-shadow 1.5s ease;
+}
+
+/* inner content */
+.ring-inner{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.ring-phase-label{
+  font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  margin-bottom:5px;transition:color 2s ease,opacity .5s ease;
+  opacity:.8;
+}
+.ring-time{
+  font-size:70px;font-weight:200;color:var(--text0);
+  letter-spacing:-4px;line-height:1;font-variant-numeric:tabular-nums;
+  transition:font-weight .5s ease;
+}
+.ring-colon{animation:blink 1s step-end infinite}
+.ring-paused .ring-colon{animation:none;opacity:.3}
+.ring-sub{font-size:12px;color:var(--text2);margin-top:5px;letter-spacing:.05em;transition:color 2s ease}
+.ring-pct{
+  font-size:15px;font-weight:700;margin-top:4px;
+  transition:color 2s ease;
+}
+
+/* phase indicator dots below ring */
+.phase-dots{display:flex;gap:8px;margin-top:14px;justify-content:center;align-items:center}
+.ph-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.1);
+  transition:all .6s ease;
+}
+.ph-dot.ph1{background:var(--purple);border-color:rgba(167,139,250,.5);box-shadow:0 0 8px rgba(167,139,250,.5)}
+.ph-dot.ph2{background:var(--gold);border-color:rgba(245,200,66,.5);box-shadow:0 0 8px rgba(245,200,66,.5)}
+.ph-dot.ph3{background:var(--coral);border-color:rgba(255,123,107,.5);box-shadow:0 0 8px rgba(255,123,107,.5)}
+.ph-dot.active-ph{transform:scale(1.5)}
+
+/* countdown label next to ring */
+.phase-badge{
+  display:flex;align-items:center;gap:6px;
+  font-size:11px;font-weight:600;
+  padding:4px 12px;border-radius:99px;
+  margin-top:10px;
+  transition:all 2s ease;
+  border:1px solid;
+}
+
+/* ── TOMATO ROW ── */
+.tomato-row{display:flex;justify-content:center;gap:9px;margin-bottom:18px}
+.tom{width:11px;height:11px;border-radius:50%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.1);transition:all .3s}
+.tom.done{background:var(--purple);border-color:rgba(167,139,250,.6);box-shadow:0 0 10px rgba(167,139,250,.5)}
+.tom.cur{background:var(--gold);border-color:rgba(245,200,66,.6);box-shadow:0 0 10px rgba(245,200,66,.5)}
+
+/* ── ACTION BUTTONS ── */
+.acts{display:flex;gap:9px;margin-bottom:14px}
+.fa{padding:15px;border-radius:17px;border:none;cursor:pointer;font-size:14px;font-weight:700;transition:all .22s;font-family:'Inter',sans-serif;flex:1}
+.fa-main{background:linear-gradient(135deg,#7C3AED,#4C1D95);color:#fff;box-shadow:0 5px 20px rgba(76,29,149,.5);flex:2;transition:background 2s ease,box-shadow .3s ease}
+.fa-main:hover{transform:translateY(-1px)}
+.fa-sec{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:var(--text1)}
+.fa-sec:hover{background:rgba(255,255,255,.13)}
+.fa-stop{background:rgba(255,123,107,.14);border:1px solid rgba(255,123,107,.22);color:var(--coral)}
+
+/* ── STATS ── */
+.foc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.fsc{background:rgba(255,255,255,.04);border:1px solid var(--bd);border-radius:14px;padding:12px;text-align:center}
+.fsc-v{font-size:20px;font-weight:800;letter-spacing:-.5px;margin-bottom:2px}
+.fsc-l{font-size:10px;color:var(--text2)}
+
+/* ── DAD SYNC ── */
+.dad-sync{background:rgba(61,214,140,.055);border:1px solid rgba(61,214,140,.13);border-radius:16px;padding:13px 15px;display:flex;align-items:center;gap:11px;margin-bottom:14px}
+.ds-av{font-size:22px;flex-shrink:0}
+.ds-info{flex:1}
+.ds-name{font-size:13px;font-weight:600;color:var(--text0)}
+.ds-sub{font-size:11px;color:var(--text2);margin-top:1px}
+.ds-right{display:flex;align-items:center;gap:7px}
+.live-dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 1.8s ease-in-out infinite}
+.ds-time{font-size:17px;font-weight:700;color:var(--text0);letter-spacing:-1px}
+
+/* ── TASK PICKER ── */
+.tp-item{display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:14px;margin-bottom:7px;cursor:pointer;transition:all .2s}
+.tp-item:hover{border-color:rgba(255,255,255,.13)}
+.tp-item.sel{background:rgba(167,139,250,.09);border-color:rgba(167,139,250,.33)}
+
+/* ── COMPLETION OVERLAY ── */
+.overlay{position:absolute;inset:0;z-index:400;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;backdrop-filter:blur(20px);animation:fadeUp .35s ease}
+.ov-c{background:linear-gradient(160deg,rgba(8,14,30,.97),rgba(12,20,46,.97))}
+.ov-b{background:linear-gradient(160deg,rgba(4,18,14,.97),rgba(8,24,18,.97))}
+.ov-icon{font-size:76px;margin-bottom:14px;animation:popIn .5s ease}
+.ov-title{font-size:26px;font-weight:800;color:var(--text0);letter-spacing:-.7px;margin-bottom:7px;text-align:center}
+.ov-sub{font-size:13px;color:var(--text1);text-align:center;line-height:1.65;margin-bottom:22px}
+.ov-box{background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.22);border-radius:16px;padding:14px 18px;margin-bottom:22px;width:100%;text-align:center}
+.ov-box-name{font-size:15px;font-weight:600;color:var(--text0);margin-bottom:3px}
+.ov-box-meta{font-size:12px;color:var(--text2)}
+.ov-btns{display:flex;flex-direction:column;gap:9px;width:100%}
+.ov-btn{padding:16px;border:none;border-radius:17px;font-size:15px;font-weight:700;cursor:pointer;transition:all .22s;font-family:'Inter',sans-serif;text-align:center}
+.ov-green{background:linear-gradient(135deg,#0A5C38,#0D7A48);color:#fff;box-shadow:0 6px 22px rgba(10,92,56,.5)}
+.ov-green:hover{transform:translateY(-1px)}
+.ov-purple{background:rgba(167,139,250,.18);border:1px solid rgba(167,139,250,.3);color:var(--purple2)}
+.ov-ghost{background:transparent;border:none;color:var(--text2);font-size:13px;font-weight:400;padding:8px}
+.break-t{font-size:60px;font-weight:200;color:var(--green);letter-spacing:-3px;margin:10px 0 22px;font-variant-numeric:tabular-nums}
+
+/* ── DEMO CONTROLS ── */
+.demo-bar{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:14px;margin-bottom:14px}
+.demo-lbl{font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.demo-phases{display:flex;gap:8px;flex-wrap:wrap}
+.demo-ph-btn{flex:1;min-width:0;padding:9px 6px;border:1px solid var(--bd);border-radius:11px;font-size:11px;font-weight:600;cursor:pointer;text-align:center;background:rgba(255,255,255,.04);color:var(--text1);transition:all .2s;font-family:'Inter',sans-serif}
+.demo-ph-btn:hover{background:rgba(255,255,255,.08)}
+.demo-ph-btn.ph1{border-color:rgba(167,139,250,.3);color:var(--purple2)}
+.demo-ph-btn.ph2{border-color:rgba(245,200,66,.3);color:var(--gold)}
+.demo-ph-btn.ph3{border-color:rgba(255,123,107,.3);color:var(--coral2)}
+</style>
+</head>
+<body>
+<div class="shell" id="shell">
+  <canvas class="sf" id="sf"></canvas>
+  <div class="orb o1" id="orb1"></div>
+  <div class="orb o2"></div>
+  <div class="orb o3" id="orb3"></div>
+
+  <div class="notch"><div class="n-cam"></div><div class="n-pill"></div><div class="n-cam"></div></div>
+  <div class="sbar">
+    <div class="sbar-t" id="clockEl">21:14</div>
+    <div class="sbar-r">▲▲▲ &nbsp;🔋 92%</div>
+  </div>
+
+  <div class="scroll">
+    <div style="padding:14px 0 0">
+
+      <!-- MODE SWITCH -->
+      <div class="mode-sw">
+        <div class="ms on">📋 任务专注</div>
+        <div class="ms">🍅 自由番茄</div>
+      </div>
+
+      <!-- TASK CHIP -->
+      <div class="task-chip" id="taskChip">
+        <div class="tc-dot" id="tcDot"></div>
+        <div class="tc-name" id="tcName">练习册第5页，15道计算题</div>
+        <div class="tc-tag" id="tcTag">数学</div>
+      </div>
+
+      <!-- RING STAGE -->
+      <div class="ring-stage" id="ringStage">
+        <!-- ambient glow behind everything -->
+        <div class="ring-ambient" id="ringAmbient"></div>
+        <!-- decorative outer ring -->
+        <div class="ring-outer-deco" id="ringOuterDeco"></div>
+
+        <div class="ring-wrap" id="ringWrap">
+          <!-- glow around ring -->
+          <div class="ring-glow-ring" id="ringGlowRing"></div>
+
+          <svg width="264" height="264" viewBox="0 0 264 264" id="ringSvg">
+            <defs>
+              <!-- Phase 1: purple -->
+              <linearGradient id="g-ph1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#C4B5FD"/>
+                <stop offset="100%" style="stop-color:#4C1D95"/>
+              </linearGradient>
+              <!-- Phase 2: gold -->
+              <linearGradient id="g-ph2" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#FFE085"/>
+                <stop offset="100%" style="stop-color:#8A6800"/>
+              </linearGradient>
+              <!-- Phase 3: coral/red -->
+              <linearGradient id="g-ph3" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#FFA598"/>
+                <stop offset="100%" style="stop-color:#B91C1C"/>
+              </linearGradient>
+              <!-- transition ph1→ph2 -->
+              <linearGradient id="g-trans12" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#E0C86A"/>
+                <stop offset="100%" style="stop-color:#7C3AED"/>
+              </linearGradient>
+              <!-- transition ph2→ph3 -->
+              <linearGradient id="g-trans23" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#FFB080"/>
+                <stop offset="100%" style="stop-color:#B45309"/>
+              </linearGradient>
+
+              <!-- dot glow filter -->
+              <filter id="dotGlow" x="-100%" y="-100%" width="300%" height="300%">
+                <feGaussianBlur stdDeviation="4" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <!-- ring blur for glow track -->
+              <filter id="ringBlur">
+                <feGaussianBlur stdDeviation="3"/>
+              </filter>
+            </defs>
+
+            <!-- outer subtle tick ring -->
+            <circle fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1" cx="132" cy="132" r="122"/>
+            <!-- main track -->
+            <circle fill="none" stroke="rgba(255,255,255,0.045)" stroke-width="10" cx="132" cy="132" r="116"/>
+            <!-- inner track (layer 2) -->
+            <circle fill="none" stroke="rgba(255,255,255,0.018)" stroke-width="1" cx="132" cy="132" r="103"/>
+
+            <!-- glow copy of progress (blurred, below) -->
+            <circle id="progressGlow" fill="none" stroke="url(#g-ph1)" stroke-width="16" stroke-linecap="round"
+              cx="132" cy="132" r="116"
+              stroke-dasharray="729" stroke-dashoffset="729"
+              opacity="0.35" filter="url(#ringBlur)"
+              style="transition:stroke-dashoffset .35s linear"/>
+
+            <!-- main progress ring -->
+            <circle id="progressRing" fill="none" stroke="url(#g-ph1)" stroke-width="10" stroke-linecap="round"
+              cx="132" cy="132" r="116"
+              stroke-dasharray="729" stroke-dashoffset="729"
+              style="transition:stroke-dashoffset .35s linear;filter:drop-shadow(0 0 8px rgba(167,139,250,.6))"/>
+
+            <!-- progress dot (head of ring) -->
+            <circle id="progressDot" cx="132" cy="16" r="7" fill="#C4B5FD" filter="url(#dotGlow)"
+              style="transition:fill 2s ease,r .4s ease,opacity .3s;opacity:0"/>
+          </svg>
+
+          <div class="ring-inner" id="ringInner">
+            <div class="ring-phase-label" id="ringPhaseLbl" style="color:var(--purple)">专注时间</div>
+            <div class="ring-time" id="ringTime">
+              <span id="ringM">25</span><span class="ring-colon" id="ringColon">:</span><span id="ringS">00</span>
+            </div>
+            <div class="ring-sub" id="ringSub" style="color:var(--text2)">点击开始</div>
+            <div class="ring-pct" id="ringPct" style="color:var(--purple)"></div>
+          </div>
+        </div>
+
+        <!-- phase dots -->
+        <div class="phase-dots">
+          <div class="ph-dot ph1 active-ph" id="pd1"></div>
+          <div style="width:20px;height:1px;background:rgba(255,255,255,.1)"></div>
+          <div class="ph-dot" id="pd2"></div>
+          <div style="width:20px;height:1px;background:rgba(255,255,255,.1)"></div>
+          <div class="ph-dot" id="pd3"></div>
+        </div>
+
+        <!-- phase badge -->
+        <div class="phase-badge" id="phaseBadge" style="color:var(--purple2);border-color:rgba(167,139,250,.25);background:rgba(167,139,250,.08)">
+          <span id="phaseBadgeIcon">🌙</span>
+          <span id="phaseBadgeText">沉静专注中</span>
+        </div>
+      </div>
+
+      <!-- TOMATO ROW -->
+      <div class="tomato-row" id="tomatoRow"></div>
+
+      <!-- DEMO CONTROLS — quick jump to phase for preview -->
+      <div class="demo-bar">
+        <div class="demo-lbl">预览各阶段效果</div>
+        <div class="demo-phases">
+          <button class="demo-ph-btn ph1" onclick="jumpToPhase(1)">🌙 第一段<br><span style="font-size:10px;opacity:.7">25→10min</span></button>
+          <button class="demo-ph-btn ph2" onclick="jumpToPhase(2)">🔥 第二段<br><span style="font-size:10px;opacity:.7">10→5min</span></button>
+          <button class="demo-ph-btn ph3" onclick="jumpToPhase(3)">⚡ 最后冲刺<br><span style="font-size:10px;opacity:.7">5→0min</span></button>
+          <button class="demo-ph-btn" onclick="triggerComplete()" style="border-color:rgba(61,214,140,.3);color:var(--green)">🎉 完成弹窗</button>
+        </div>
+      </div>
+
+      <!-- ACTION BUTTONS -->
+      <div class="acts">
+        <button class="fa fa-stop" id="btnStop" onclick="stopFocus()" style="display:none">✕ 放弃</button>
+        <button class="fa fa-main" id="btnMain" onclick="mainClick()">▶  开始专注</button>
+        <button class="fa fa-sec" id="btnPause" onclick="pauseClick()" style="display:none">⏸ 暂停</button>
+      </div>
+
+      <!-- STATS -->
+      <div class="foc-stats">
+        <div class="fsc"><div class="fsc-v" id="fsTom" style="color:var(--purple)">0</div><div class="fsc-l">今日番茄</div></div>
+        <div class="fsc"><div class="fsc-v" id="fsMins" style="color:var(--green)">0m</div><div class="fsc-l">专注时长</div></div>
+        <div class="fsc"><div class="fsc-v" id="fsS" style="color:var(--gold)">7🔥</div><div class="fsc-l">连续天数</div></div>
+      </div>
+
+      <!-- DAD SYNC -->
+      <div class="dad-sync">
+        <div class="ds-av">👨</div>
+        <div class="ds-info">
+          <div class="ds-name">爸爸也在专注</div>
+          <div class="ds-sub">工作中 · 谁今天专注更久？</div>
+        </div>
+        <div class="ds-right">
+          <div class="live-dot"></div>
+          <div class="ds-time" id="dadTime">32:18</div>
+        </div>
+      </div>
+
+      <!-- TASK PICKER -->
+      <div style="margin-bottom:14px">
+        <div style="font-size:16px;font-weight:700;color:var(--text0);letter-spacing:-.3px;margin-bottom:11px">选择要专注的任务</div>
+        <div class="tp-item sel">
+          <div style="width:9px;height:9px;border-radius:50%;background:var(--purple);flex-shrink:0;box-shadow:0 0 8px var(--purple)"></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:700;color:var(--text0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">练习册第5页，15道计算题</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px">数学 · 约 20 分钟</div>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:var(--purple2);background:rgba(167,139,250,.15);border-radius:99px;padding:3px 10px">当前</div>
+        </div>
+        <div class="tp-item">
+          <div style="width:9px;height:9px;border-radius:50%;background:#6EEDB0;flex-shrink:0"></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:500;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">背诵单词 Unit 7，共20个</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px">英语 · 约 15 分钟</div>
+          </div>
+        </div>
+        <div class="tp-item">
+          <div style="width:9px;height:9px;border-radius:50%;background:#FFD060;flex-shrink:0"></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:500;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">日记一篇，不少于200字</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px">语文 · 约 40 分钟</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bnav">
+    <div class="bni"><div class="bni-icon">🏠</div><div class="bni-lbl">首页</div></div>
+    <div class="bni"><div class="bni-icon">📋</div><div class="bni-lbl">任务</div></div>
+    <div class="fab-w"><div class="fab">⏱️</div></div>
+    <div class="bni"><div class="bni-icon">🎯</div><div class="bni-lbl">游戏</div></div>
+    <div class="bni"><div class="bni-icon">📓</div><div class="bni-lbl">时光机</div></div>
+  </div>
+
+  <!-- COMPLETION OVERLAY -->
+  <div class="overlay ov-c" id="ovComplete" style="display:none">
+    <div class="ov-icon">🎉</div>
+    <div class="ov-title">番茄完成！</div>
+    <div class="ov-sub">25 分钟专注结束<br>你刚才在专注这项任务：</div>
+    <div class="ov-box">
+      <div class="ov-box-name">练习册第5页，15道计算题</div>
+      <div class="ov-box-meta">数学 · 已专注 25 分钟</div>
+    </div>
+    <div class="ov-btns">
+      <button class="ov-btn ov-green" onclick="closeOverlay()">✅ 这项任务完成了！</button>
+      <button class="ov-btn ov-purple" onclick="closeOverlay()">⏱ 还没完，再来一个番茄</button>
+      <button class="ov-btn ov-ghost" onclick="closeOverlay()">跳过确认，直接休息</button>
+    </div>
+  </div>
+
+  <!-- BREAK OVERLAY -->
+  <div class="overlay ov-b" id="ovBreak" style="display:none">
+    <div class="ov-icon">☕</div>
+    <div class="ov-title">休息 5 分钟</div>
+    <div class="ov-sub">站起来动一动，喝杯水<br>让大脑好好放松一下</div>
+    <div class="break-t" id="breakT">05:00</div>
+    <div class="ov-btns">
+      <button class="ov-btn ov-purple" onclick="closeBreak()">跳过休息，继续下一个</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// STARFIELD
+// ══════════════════════════════════════
+const sf=document.getElementById('sf'),ctx=sf.getContext('2d');
+sf.width=393;sf.height=900;
+const stars=Array.from({length:160},()=>({
+  x:Math.random()*393,y:Math.random()*900,
+  r:.1+Math.random()*1.15,a:Math.random(),
+  sp:.002+Math.random()*.009,ph:Math.random()*Math.PI*2
+}));
+function drawSF(t){
+  ctx.clearRect(0,0,393,900);
+  stars.forEach(s=>{
+    const a=s.a*(.2+.8*Math.sin(t*s.sp+s.ph));
+    ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,255,255,${a})`;ctx.fill();
+  });
+  requestAnimationFrame(drawSF);
+}
+requestAnimationFrame(drawSF);
+
+// ══════════════════════════════════════
+// FOCUS ENGINE + THREE-PHASE RING
+// ══════════════════════════════════════
+const TOTAL_SECS = 25 * 60;
+const BREAK_SECS = 5 * 60;
+
+// Phase thresholds
+const PH1_START = TOTAL_SECS;       // 25:00
+const PH2_START = 10 * 60;          // 10:00  → gold transition starts
+const PH3_START = 5  * 60;          // 5:00   → coral/urgent
+
+let fLeft = TOTAL_SECS;
+let fState = 'idle'; // idle | running | paused | break
+let fInt = null;
+let bLeft = BREAK_SECS;
+let tomatoCount = 0;
+let totalFocusMins = 0;
+let dadSecs = 32*60+18;
+
+// Dad timer
+setInterval(()=>{
+  dadSecs++;
+  const m=Math.floor(dadSecs/60),s=dadSecs%60;
+  document.getElementById('dadTime').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+},1000);
+
+// Clock
+function updateClock(){
+  const n=new Date();
+  document.getElementById('clockEl').textContent=`${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
+}
+updateClock();setInterval(updateClock,15000);
+
+// ─── PHASE SYSTEM ───
+// Returns 1, 1.5 (transition 1→2), 2, 2.5 (transition 2→3), 3
+function getPhase(secsLeft){
+  if(secsLeft > PH2_START + 90) return 1;         // pure phase 1
+  if(secsLeft > PH2_START)      return 1.5;        // transitioning 1→2 (90s window)
+  if(secsLeft > PH3_START + 60) return 2;          // pure phase 2
+  if(secsLeft > PH3_START)      return 2.5;        // transitioning 2→3 (60s window)
+  return 3;                                          // phase 3 urgent
+}
+
+// Phase config
+const PHASE_CFG = {
+  1: {
+    gradient: 'url(#g-ph1)',
+    glowColor: 'rgba(167,139,250,.65)',
+    glowShadow: '0 0 55px rgba(167,139,250,.2),0 0 110px rgba(167,139,250,.08)',
+    ambientColor: 'rgba(167,139,250,.07)',
+    orb1: 'rgba(167,139,250,.09)',
+    dotFill: '#C4B5FD',
+    dotGlow: 'rgba(167,139,250,.8)',
+    dotR: 7,
+    pctColor: 'var(--purple)',
+    subColor: 'var(--text2)',
+    phaseLbl: '专注时间',
+    phaseLblColor: 'var(--purple)',
+    badgeText: '沉静专注中',
+    badgeIcon: '🌙',
+    badgeBg: 'rgba(167,139,250,.08)',
+    badgeBorder: 'rgba(167,139,250,.25)',
+    badgeColor: 'var(--purple2)',
+    breathAnim: 'breathSlow',
+    breathDur: '4s',
+    ringWrap: '',
+    btnBg: 'linear-gradient(135deg,#7C3AED,#4C1D95)',
+    btnShadow: '0 5px 20px rgba(76,29,149,.5)',
+    fw: '200',
+  },
+  2: {
+    gradient: 'url(#g-ph2)',
+    glowColor: 'rgba(245,200,66,.65)',
+    glowShadow: '0 0 55px rgba(245,200,66,.22),0 0 110px rgba(245,200,66,.09)',
+    ambientColor: 'rgba(245,200,66,.06)',
+    orb1: 'rgba(245,200,66,.08)',
+    dotFill: '#FFE085',
+    dotGlow: 'rgba(245,200,66,.9)',
+    dotR: 9,
+    pctColor: 'var(--gold)',
+    subColor: 'var(--gold)',
+    phaseLbl: '加速冲刺',
+    phaseLblColor: 'var(--gold)',
+    badgeText: '快完成了，坚持！',
+    badgeIcon: '🔥',
+    badgeBg: 'rgba(245,200,66,.09)',
+    badgeBorder: 'rgba(245,200,66,.3)',
+    badgeColor: 'var(--gold2)',
+    breathAnim: 'breathMed',
+    breathDur: '2.5s',
+    ringWrap: '',
+    btnBg: 'linear-gradient(135deg,#B8920A,#8A6800)',
+    btnShadow: '0 5px 20px rgba(138,104,0,.5)',
+    fw: '300',
+  },
+  3: {
+    gradient: 'url(#g-ph3)',
+    glowColor: 'rgba(255,123,107,.7)',
+    glowShadow: '0 0 60px rgba(255,123,107,.28),0 0 120px rgba(255,123,107,.12)',
+    ambientColor: 'rgba(255,123,107,.07)',
+    orb1: 'rgba(255,123,107,.08)',
+    dotFill: '#FFA598',
+    dotGlow: 'rgba(255,123,107,.95)',
+    dotR: 11,
+    pctColor: 'var(--coral)',
+    subColor: 'var(--coral)',
+    phaseLbl: '最后冲刺！',
+    phaseLblColor: 'var(--coral)',
+    badgeText: '快了！全力以赴！',
+    badgeIcon: '⚡',
+    badgeBg: 'rgba(255,123,107,.1)',
+    badgeBorder: 'rgba(255,123,107,.32)',
+    badgeColor: 'var(--coral2)',
+    breathAnim: 'breathUrgent',
+    breathDur: '1.4s',
+    ringWrap: 'ringPulse 1.5s ease-in-out infinite',
+    btnBg: 'linear-gradient(135deg,#DC2626,#991B1B)',
+    btnShadow: '0 5px 20px rgba(185,28,28,.5)',
+    fw: '400',
+  },
+};
+
+function lerp(a,b,t){return a+(b-a)*t}
+
+function interpolateCfg(ph){
+  if(ph===1||ph===2||ph===3) return PHASE_CFG[ph];
+  if(ph===1.5){
+    // blend: pick gradient based on progress
+    return {
+      ...PHASE_CFG[2],
+      gradient:'url(#g-trans12)',
+      glowColor:'rgba(200,175,100,.65)',
+      glowShadow:'0 0 55px rgba(200,175,100,.2),0 0 110px rgba(200,175,100,.08)',
+      ambientColor:'rgba(200,175,100,.06)',
+      orb1:'rgba(200,175,100,.08)',
+      dotFill:'#E8CE70',dotGlow:'rgba(220,190,80,.85)',dotR:8,
+      breathDur:'3.2s',breathAnim:'breathMed',
+      badgeText:'进入加速阶段…',badgeIcon:'✨',
+    };
+  }
+  // 2.5 transition
+  return {
+    ...PHASE_CFG[3],
+    gradient:'url(#g-trans23)',
+    glowColor:'rgba(255,160,90,.65)',
+    glowShadow:'0 0 58px rgba(255,160,90,.24),0 0 116px rgba(255,160,90,.1)',
+    ambientColor:'rgba(255,140,80,.07)',
+    orb1:'rgba(255,140,80,.08)',
+    dotFill:'#FF9060',dotGlow:'rgba(255,130,70,.92)',dotR:10,
+    breathDur:'1.8s',breathAnim:'breathFast',
+    badgeText:'进入冲刺阶段！',badgeIcon:'🔥',
+  };
+}
+
+let lastPhase = -1;
+
+function applyPhaseStyle(secsLeft, force=false){
+  const ph = getPhase(secsLeft);
+  if(ph === lastPhase && !force) return;
+  lastPhase = ph;
+  const cfg = interpolateCfg(ph);
+
+  // ring gradient + glow
+  document.getElementById('progressRing').setAttribute('stroke', cfg.gradient);
+  document.getElementById('progressGlow').setAttribute('stroke', cfg.gradient);
+  document.getElementById('progressRing').style.filter = `drop-shadow(0 0 8px ${cfg.glowColor})`;
+
+  // glow ring around SVG
+  document.getElementById('ringGlowRing').style.boxShadow = cfg.glowShadow;
+
+  // ambient background glow
+  const amb = document.getElementById('ringAmbient');
+  amb.style.background = `radial-gradient(circle, ${cfg.ambientColor} 0%, transparent 70%)`;
+  amb.style.opacity = fState==='running'?'1':'0';
+
+  // orbs
+  document.getElementById('orb1').style.background = `radial-gradient(circle, ${cfg.orb1} 0%, transparent 70%)`;
+
+  // progress dot
+  const dot = document.getElementById('progressDot');
+  dot.setAttribute('fill', cfg.dotFill);
+  dot.setAttribute('r', cfg.dotR);
+  dot.style.filter = `drop-shadow(0 0 ${cfg.dotR+2}px ${cfg.dotGlow})`;
+
+  // text colors
+  document.getElementById('ringPhaseLbl').textContent = cfg.phaseLbl;
+  document.getElementById('ringPhaseLbl').style.color = cfg.phaseLblColor;
+  document.getElementById('ringPct').style.color = cfg.pctColor;
+  document.getElementById('ringSub').style.color = fState==='running' ? cfg.subColor : 'var(--text2)';
+  document.getElementById('ringTime').style.fontWeight = cfg.fw;
+
+  // phase badge
+  document.getElementById('phaseBadge').style.background = cfg.badgeBg;
+  document.getElementById('phaseBadge').style.borderColor = cfg.badgeBorder;
+  document.getElementById('phaseBadge').style.color = cfg.badgeColor;
+  document.getElementById('phaseBadgeIcon').textContent = cfg.badgeIcon;
+  document.getElementById('phaseBadgeText').textContent = cfg.badgeText;
+
+  // breath animation on ring wrap
+  const rw = document.getElementById('ringWrap');
+  rw.style.animation = fState==='running' && cfg.ringWrap ? cfg.ringWrap : '';
+
+  // phase dots
+  document.getElementById('pd1').className = 'ph-dot ph1' + (ph>=1?' active-ph':'');
+  document.getElementById('pd2').className = 'ph-dot' + (ph>=2?' ph2 active-ph':'');
+  document.getElementById('pd3').className = 'ph-dot' + (ph>=3?' ph3 active-ph':'');
+
+  // start button
+  const btnM = document.getElementById('btnMain');
+  btnM.style.background = cfg.btnBg;
+  btnM.style.boxShadow = cfg.btnShadow;
+}
+
+// ── UPDATE RING DISPLAY ──
+function updateRingDisplay(){
+  const m = String(Math.floor(fLeft/60)).padStart(2,'0');
+  const s = String(fLeft%60).padStart(2,'0');
+  document.getElementById('ringM').textContent = m;
+  document.getElementById('ringS').textContent = s;
+
+  // progress
+  const prog = 1 - fLeft/TOTAL_SECS;
+  const circ = 729;
+  document.getElementById('progressRing').style.strokeDashoffset = circ*(1-prog);
+  document.getElementById('progressGlow').style.strokeDashoffset = circ*(1-prog);
+
+  // pct label
+  const pct = Math.round(prog*100);
+  document.getElementById('ringPct').textContent = pct>0 ? pct+'%' : '';
+
+  // move progress dot along the ring
+  if(prog > 0.01){
+    const angle = prog * 2 * Math.PI - Math.PI/2; // start from top, go clockwise
+    const cx=132, cy=132, r=116;
+    const dx = cx + r*Math.cos(angle);
+    const dy = cy + r*Math.sin(angle);
+    const dot = document.getElementById('progressDot');
+    dot.setAttribute('cx', dx.toFixed(2));
+    dot.setAttribute('cy', dy.toFixed(2));
+    dot.style.opacity = '1';
+  } else {
+    document.getElementById('progressDot').style.opacity = '0';
+  }
+
+  applyPhaseStyle(fLeft);
+
+  // ambient visible during run
+  document.getElementById('ringAmbient').style.opacity = fState==='running' ? '1' : '0';
+}
+
+// ── CONTROLS ──
+function mainClick(){
+  if(fState==='idle') startFocus();
+}
+
+function startFocus(){
+  fState='running';
+  document.getElementById('btnMain').style.display='none';
+  document.getElementById('btnPause').style.display='flex';
+  document.getElementById('btnStop').style.display='flex';
+  document.getElementById('ringSub').textContent='专注中…';
+  document.getElementById('progressDot').style.opacity='1';
+  lastPhase=-1;
+  applyPhaseStyle(fLeft, true);
+  document.getElementById('ringAmbient').style.opacity='1';
+  clearInterval(fInt);
+  fInt=setInterval(tick,1000);
+}
+
+function tick(){
+  if(fState!=='running')return;
+  fLeft--;
+  totalFocusMins=Math.round((TOTAL_SECS-fLeft)/60);
+  document.getElementById('fsMins').textContent=totalFocusMins>59?Math.round(totalFocusMins/60)+'h':totalFocusMins+'m';
+  updateRingDisplay();
+  if(fLeft<=0){clearInterval(fInt);onComplete();}
+}
+
+function pauseClick(){
+  if(fState==='running'){
+    fState='paused';
+    document.getElementById('btnPause').textContent='▶ 继续';
+    document.getElementById('ringSub').textContent='已暂停';
+    document.getElementById('ringInner').classList.add('ring-paused');
+    document.getElementById('ringAmbient').style.opacity='0.3';
+    document.getElementById('ringWrap').style.animation='';
+  } else if(fState==='paused'){
+    fState='running';
+    document.getElementById('btnPause').textContent='⏸ 暂停';
+    document.getElementById('ringSub').textContent='专注中…';
+    document.getElementById('ringInner').classList.remove('ring-paused');
+    document.getElementById('ringAmbient').style.opacity='1';
+    applyPhaseStyle(fLeft,true);
+  }
+}
+
+function stopFocus(){
+  clearInterval(fInt);
+  fState='idle';fLeft=TOTAL_SECS;lastPhase=-1;
+  resetRing();
+}
+
+function resetRing(){
+  document.getElementById('btnMain').style.display='flex';
+  document.getElementById('btnPause').style.display='none';
+  document.getElementById('btnStop').style.display='none';
+  document.getElementById('btnPause').textContent='⏸ 暂停';
+  document.getElementById('ringM').textContent='25';
+  document.getElementById('ringS').textContent='00';
+  document.getElementById('ringSub').textContent='点击开始';
+  document.getElementById('ringPct').textContent='';
+  document.getElementById('progressRing').style.strokeDashoffset='729';
+  document.getElementById('progressGlow').style.strokeDashoffset='729';
+  document.getElementById('progressDot').style.opacity='0';
+  document.getElementById('ringWrap').style.animation='';
+  document.getElementById('ringAmbient').style.opacity='0';
+  document.getElementById('ringInner').classList.remove('ring-paused');
+  // reset to phase 1
+  document.getElementById('progressRing').setAttribute('stroke','url(#g-ph1)');
+  document.getElementById('progressGlow').setAttribute('stroke','url(#g-ph1)');
+  document.getElementById('progressRing').style.filter='drop-shadow(0 0 8px rgba(167,139,250,.6))';
+  document.getElementById('ringGlowRing').style.boxShadow='';
+  document.getElementById('ringPhaseLbl').textContent='专注时间';
+  document.getElementById('ringPhaseLbl').style.color='var(--purple)';
+  document.getElementById('ringPct').style.color='var(--purple)';
+  document.getElementById('ringSub').style.color='var(--text2)';
+  document.getElementById('ringTime').style.fontWeight='200';
+  document.getElementById('phaseBadge').style.background='rgba(167,139,250,.08)';
+  document.getElementById('phaseBadge').style.borderColor='rgba(167,139,250,.25)';
+  document.getElementById('phaseBadge').style.color='var(--purple2)';
+  document.getElementById('phaseBadgeIcon').textContent='🌙';
+  document.getElementById('phaseBadgeText').textContent='沉静专注中';
+  document.getElementById('pd1').className='ph-dot ph1 active-ph';
+  document.getElementById('pd2').className='ph-dot';
+  document.getElementById('pd3').className='ph-dot';
+  document.getElementById('btnMain').style.background='linear-gradient(135deg,#7C3AED,#4C1D95)';
+  document.getElementById('btnMain').style.boxShadow='0 5px 20px rgba(76,29,149,.5)';
+  document.getElementById('orb1').style.background='radial-gradient(circle,rgba(167,139,250,.09) 0%,transparent 70%)';
+}
+
+// ── DEMO: jump to phase ──
+function jumpToPhase(ph){
+  // set secsLeft to middle of that phase
+  if(ph===1) fLeft = 18*60;  // mid of 25→10
+  if(ph===2) fLeft = 7*60;   // mid of 10→5
+  if(ph===3) fLeft = 2*60;   // last 2 min
+  fState='running';
+  lastPhase=-1;
+  document.getElementById('btnMain').style.display='none';
+  document.getElementById('btnPause').style.display='flex';
+  document.getElementById('btnStop').style.display='flex';
+  document.getElementById('ringSub').textContent='专注中…';
+  document.getElementById('progressDot').style.opacity='1';
+  clearInterval(fInt);
+  updateRingDisplay();
+  fInt=setInterval(tick,1000);
+}
+
+function triggerComplete(){
+  clearInterval(fInt);fState='idle';
+  onComplete();
+}
+
+function onComplete(){
+  tomatoCount++;
+  document.getElementById('fsTom').textContent=tomatoCount;
+  renderTomatoes();
+  document.getElementById('ovComplete').style.display='flex';
+}
+
+function closeOverlay(){
+  document.getElementById('ovComplete').style.display='none';
+  fLeft=TOTAL_SECS;resetRing();
+  startBreak();
+}
+
+function startBreak(){
+  bLeft=BREAK_SECS;
+  document.getElementById('ovBreak').style.display='flex';
+  clearInterval(fInt);
+  fInt=setInterval(()=>{
+    bLeft--;
+    const m=String(Math.floor(bLeft/60)).padStart(2,'0'),s=String(bLeft%60).padStart(2,'0');
+    document.getElementById('breakT').textContent=m+':'+s;
+    if(bLeft<=0){clearInterval(fInt);closeBreak();}
+  },1000);
+}
+function closeBreak(){
+  document.getElementById('ovBreak').style.display='none';
+  fLeft=TOTAL_SECS;resetRing();
+}
+
+// ── TOMATOES ──
+function renderTomatoes(){
+  const row=document.getElementById('tomatoRow');row.innerHTML='';
+  const total=Math.max(4,tomatoCount+1);
+  for(let i=0;i<total;i++){
+    const d=document.createElement('div');
+    d.className='tom'+(i<tomatoCount?' done':i===tomatoCount?' cur':'');
+    row.appendChild(d);
+  }
+}
+renderTomatoes();
+
+// Breathing animation for ambient glow synced to phase
+function animateBreath(t){
+  if(fState!=='running')return requestAnimationFrame(animateBreath);
+  const ph=getPhase(fLeft);
+  let dur,amp;
+  if(ph<=1.5){dur=4000;amp=0.07}
+  else if(ph<=2.5){dur=2500;amp=0.09}
+  else{dur=1400;amp=0.12}
+  const s=.5+.5*Math.sin(t/dur*Math.PI*2);
+  const o=0.05+s*amp;
+  document.getElementById('ringAmbient').style.opacity=o;
+  requestAnimationFrame(animateBreath);
+}
+requestAnimationFrame(animateBreath);
+</script>
+</body>
+</html>
