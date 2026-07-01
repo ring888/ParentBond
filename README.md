@@ -31,7 +31,7 @@ Linux server:
 ```bash
 cp .env.docker.example .env
 nano .env
-chmod +x scripts/docker-update.sh
+chmod +x scripts/docker-update.sh scripts/docker-deploy.sh
 ./scripts/docker-update.sh
 ```
 
@@ -44,18 +44,24 @@ Copy-Item .env.docker.example .env
 
 Open `http://localhost:8080` after the containers are healthy.
 
-Daily updates on Linux:
+## Fast Linux updates
+
+After the first deployment, use the fast deploy script:
 
 ```bash
-./scripts/docker-update.sh
-./scripts/docker-update.sh --service web
-./scripts/docker-update.sh --service api
+cd /home/opt/parentbond
+./scripts/docker-deploy.sh
 ```
 
-Daily updates through npm when Node.js is available:
+It pulls the latest GitHub code, detects changed files, and rebuilds only the affected service:
 
-```powershell
-npm run docker:update
-npm run docker:update:web
-npm run docker:update:api
+- docs/scripts only: no container rebuild
+- frontend only: rebuild `web`
+- backend only: rebuild `api`
+- shared/package/compose changes: rebuild both
+
+Avoid `--no-cache` for daily updates. Use it only when the browser still shows old bundled code:
+
+```bash
+./scripts/docker-deploy.sh --no-cache
 ```

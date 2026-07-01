@@ -16,6 +16,7 @@
     "docker:update": "node scripts/docker-update.mjs",
     "docker:update:api": "node scripts/docker-update.mjs --service api",
     "docker:update:web": "node scripts/docker-update.mjs --service web",
+    "docker:deploy": "sh scripts/docker-deploy.sh",
     "docker:logs": "docker compose logs -f --tail=200 api web"
   },
   "engines": {

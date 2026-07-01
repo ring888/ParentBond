@@ -119,7 +119,11 @@ if (-not $SkipBuild) {
   Invoke-Compose -Arguments $buildArgs
 }
 
-Invoke-Compose -Arguments (@("up", "-d", "--remove-orphans") + $targets)
+$upArgs = @("up", "-d", "--remove-orphans")
+if ($Service -ne "all") {
+  $upArgs += "--no-deps"
+}
+Invoke-Compose -Arguments ($upArgs + $targets)
 
 if (-not $SkipHealthCheck) {
   Wait-ForApiHealth -TimeoutSeconds $HealthTimeoutSeconds

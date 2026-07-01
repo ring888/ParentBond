@@ -8,6 +8,30 @@
 - Docker CentOS 安装文档：https://docs.docker.com/engine/install/centos/
 - Docker Compose Linux 安装文档：https://docs.docker.com/compose/install/linux/
 
+## 最快日常更新命令
+
+首次部署完成后，平时不要每次都手动 `git pull` 再完整重建。直接在服务器项目目录执行：
+
+```bash
+cd /home/opt/parentbond
+./scripts/docker-deploy.sh
+```
+
+这个脚本会自动：
+
+- 拉取 GitHub 最新代码。
+- 对比本次改了哪些文件。
+- 只改文档或脚本时，不重建容器。
+- 只改前端时，只重建 `web`。
+- 只改后端时，只重建 `api`。
+- 改了共享包、依赖、Dockerfile 或 compose 配置时，才重建相关服务。
+
+日常更新不要加 `--no-cache`。`--no-cache` 会让 Docker 重新安装依赖和完整构建，只在缓存异常、浏览器仍显示旧代码时使用：
+
+```bash
+./scripts/docker-deploy.sh --no-cache
+```
+
 ## 1. 部署后的结构
 
 部署完成后，服务器上会有 3 个 Docker 服务：

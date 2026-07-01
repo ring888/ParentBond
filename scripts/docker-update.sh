@@ -146,8 +146,13 @@ if [ "$SKIP_BUILD" = "0" ]; then
   run docker compose build $BUILD_ARGS $TARGETS
 fi
 
+UP_ARGS="up -d --remove-orphans"
+if [ "$SERVICE" != "all" ]; then
+  UP_ARGS="$UP_ARGS --no-deps"
+fi
+
 # shellcheck disable=SC2086
-run docker compose up -d --remove-orphans $TARGETS
+run docker compose $UP_ARGS $TARGETS
 
 if [ "$SKIP_HEALTH" = "0" ]; then
   wait_for_api_health
