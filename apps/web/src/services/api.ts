@@ -36,7 +36,7 @@ const API_BASE_URL = resolveApiBaseUrl();
 
 function resolveMediaUrl(url: string) {
   if (!url || /^https?:\/\//i.test(url)) return url;
-  return `${new URL(API_BASE_URL).origin}${url}`;
+  return `${new URL(API_BASE_URL, window.location.origin).origin}${url}`;
 }
 
 function normalizeWalletEvidence(evidence?: WalletEvidence | null) {

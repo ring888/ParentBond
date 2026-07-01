@@ -50,7 +50,7 @@ function authApiBaseUrl() {
   const configured = import.meta.env.VITE_API_BASE_URL;
   if (configured) return configured;
 
-  return `${window.location.protocol}//${window.location.hostname}:3000/api/v1`;
+  return "/api/v1";
 }
 
 async function authRequest<T>(path: string, init?: RequestInit): Promise<T> {

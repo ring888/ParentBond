@@ -730,7 +730,14 @@ WEB_ORIGIN=http://192.168.168.51:8090
 grep -E 'VITE_API_BASE_URL|WEB_ORIGIN|WEB_PORT' .env
 ```
 
-确认 `VITE_API_BASE_URL` 是浏览器能访问到的地址，不要写成容器内部地址 `http://api:3000/api/v1`。
+推荐使用同域代理地址：
+
+```env
+VITE_API_BASE_URL=/api/v1
+WEB_ORIGIN=http://你的服务器IP:8080
+```
+
+确认 `VITE_API_BASE_URL` 不要写成容器内部地址 `http://api:3000/api/v1`。如果浏览器 Network 里仍然看到 `http://localhost:8080/api/v1/...`，说明前端 web 镜像还是旧构建产物，需要重新构建 web 镜像。
 
 修改后重新构建前端：
 
