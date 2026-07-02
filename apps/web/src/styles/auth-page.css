@@ -13,12 +13,30 @@
   font-family:'Inter',-apple-system,sans-serif;
   background:#030810;
   display:flex;justify-content:center;align-items:flex-start;
+  width:100%;max-width:100vw;
   min-height:100vh;padding:20px 12px 40px;
+  overflow-x:hidden;
+  touch-action:pan-y;
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+}
+.auth-page button,
+.auth-page input,
+.auth-page select,
+.auth-page textarea{
+  font:inherit;
 }
 .auth-page button{
-  font:inherit;
   color:inherit;
 }
+.auth-page input,
+.auth-page select,
+.auth-page textarea{font-size:max(16px,1em)}
+.auth-page button,
+.auth-page input,
+.auth-page select,
+.auth-page textarea,
+.auth-page a{touch-action:manipulation}
 .auth-page button:focus-visible,
 .auth-page [role="button"]:focus-visible{
   outline:2px solid rgba(167,139,250,.55);
@@ -27,7 +45,7 @@
 
 /* 鈺愨晲鈺?SHELL 鈺愨晲鈺?*/
 .shell{
-  width:393px;min-height:852px;
+  width:393px;max-width:100%;min-height:852px;
   background:#0B1730 !important;
   border-radius:50px;
   position:relative;overflow:hidden;isolation:isolate;color:var(--text0);
@@ -75,7 +93,7 @@ canvas.sf{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
   background:rgba(255,255,255,.05);
   border:1px solid rgba(255,255,255,.09);
   border-radius:14px;
-  font-size:15px;color:var(--text0);
+  font-size:16px;color:var(--text0);
   font-family:'Inter',sans-serif;outline:none;
   transition:border-color .2s,background .2s;
 }
@@ -232,7 +250,7 @@ canvas.sf{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
   background:rgba(255,255,255,.03);border:1px solid var(--bd);
   border-radius:20px;position:relative;
   width:240px;margin:0 auto;
-  justify-items:center;align-items:center;touch-action:none;user-select:none;-webkit-user-select:none;
+  justify-items:center;align-items:center;touch-action:none;overscroll-behavior:contain;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
 }
 .pattern-grid.live{box-shadow:inset 0 0 24px rgba(167,139,250,.08)}
 .pat-node{
@@ -241,11 +259,11 @@ canvas.sf{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
   cursor:pointer;transition:all .15s;
   display:flex;align-items:center;justify-content:center;
   position:relative;z-index:2;
-  touch-action:none;-webkit-tap-highlight-color:transparent;
+  pointer-events:none;touch-action:none;-webkit-tap-highlight-color:transparent;-webkit-user-drag:none;
 }
 .pat-node.lit{background:rgba(167,139,250,.35);border-color:var(--purple);box-shadow:0 0 12px rgba(167,139,250,.5)}
 .pat-node.lit::after{content:'';width:10px;height:10px;background:var(--purple2);border-radius:50%;box-shadow:0 0 8px var(--purple)}
-.pattern-canvas{position:absolute;inset:0;pointer-events:none;border-radius:20px}
+.pattern-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;border-radius:20px;overflow:visible}
 .pattern-canvas polyline{fill:none;stroke:rgba(196,181,253,.86);stroke-width:7;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 7px rgba(167,139,250,.65))}
 .pattern-status{text-align:center;font-size:12px;color:var(--text2);margin-top:10px;min-height:18px}
 
@@ -359,5 +377,4 @@ canvas.sf{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
 
 /* toast */
 .toast{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(20,28,50,.97);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px 18px;font-size:13px;color:var(--text1);z-index:900;white-space:nowrap;backdrop-filter:blur(12px);animation:fadeUp .25s ease;pointer-events:none}
-.auth-page{width:100%;}
-@media(max-width:430px){.auth-page{padding:0;}.auth-page .shell{width:100%;min-height:100vh;border-radius:0;}.auth-page .scroll{height:100vh;padding-top:28px;}}
+@media(max-width:1180px){.auth-page{padding:0;min-height:100dvh;}.auth-page .shell{width:100%;max-width:100%;min-height:100dvh;border-radius:0;}.auth-page .scroll{height:100dvh;padding-top:28px;}}

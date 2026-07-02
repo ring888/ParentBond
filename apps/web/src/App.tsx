@@ -1,7 +1,8 @@
 import {
   type CSSProperties,
-  type PointerEvent as ReactPointerEvent,
+  type MouseEvent as ReactMouseEvent,
   type ReactNode,
+  type TouchEvent as ReactTouchEvent,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -117,18 +118,6 @@ const moodOptions = [
   { mood: "😤", label: "有点生气" },
   { mood: "✨", label: "想记录" },
 ] as const;
-
-const patternNodePoints = [
-  { x: 44, y: 44 },
-  { x: 120, y: 44 },
-  { x: 196, y: 44 },
-  { x: 44, y: 120 },
-  { x: 120, y: 120 },
-  { x: 196, y: 120 },
-  { x: 44, y: 196 },
-  { x: 120, y: 196 },
-  { x: 196, y: 196 },
-];
 
 const emptyFocusStats: FocusStats = {
   completedSessionsToday: 0,
@@ -1705,16 +1694,6 @@ export function App({
           ))}
         </nav>
       </section>
-
-      <ParentObserverPanel
-        completed={completed}
-        total={tasks.length}
-        nextTask={nextTask}
-        progress={progress}
-        timerRunning={timerRunning}
-        secondsLeft={secondsLeft}
-        syncStatus={taskSyncStatus}
-      />
     </main>
   );
 }
@@ -5879,20 +5858,57 @@ function PatternSetupSheet({
 
 function PatternPad({ onComplete }: { onComplete: (pattern: string) => void }) {
   const [path, setPath] = useState<number[]>([]);
+  const [linePoints, setLinePoints] = useState<Array<{ x: number; y: number }>>([]);
+  const [pointerPoint, setPointerPoint] = useState<{ x: number; y: number } | null>(null);
   const [status, setStatus] = useState("按住星点滑动");
-  const nodeRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const nodeRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const pathRef = useRef<number[]>([]);
+  const linePointsRef = useRef<Array<{ x: number; y: number }>>([]);
   const activeRef = useRef(false);
+  const lastTouchRef = useRef(0);
 
   const setPathValue = (next: number[]) => {
     pathRef.current = next;
     setPath(next);
   };
 
+  const setLinePointsValue = (next: Array<{ x: number; y: number }>) => {
+    linePointsRef.current = next;
+    setLinePoints(next);
+  };
+
+  const pointFromClient = (clientX: number, clientY: number) => {
+    const grid = gridRef.current;
+    if (!grid) return null;
+    const rect = grid.getBoundingClientRect();
+    return {
+      x: Math.min(Math.max(clientX - rect.left, 0), rect.width),
+      y: Math.min(Math.max(clientY - rect.top, 0), rect.height),
+    };
+  };
+
+  const centerOfNode = (nodeNumber: number) => {
+    const grid = gridRef.current;
+    const node = nodeRefs.current[nodeNumber - 1];
+    if (!grid || !node) return null;
+    const gridRect = grid.getBoundingClientRect();
+    const rect = node.getBoundingClientRect();
+    return {
+      x: rect.left + rect.width / 2 - gridRect.left,
+      y: rect.top + rect.height / 2 - gridRect.top,
+    };
+  };
+
   const addNode = (node: number) => {
     const current = pathRef.current;
     if (current.includes(node)) return;
     setPathValue([...current, node]);
+    const center = centerOfNode(node);
+    if (center) {
+      setLinePointsValue([...linePointsRef.current, center]);
+      setPointerPoint(center);
+    }
     setStatus(current.length >= 2 ? "松手完成" : "继续连接");
   };
 
@@ -5908,19 +5924,65 @@ function PatternPad({ onComplete }: { onComplete: (pattern: string) => void }) {
     return null;
   };
 
-  const begin = (event: ReactPointerEvent<HTMLDivElement>) => {
-    event.currentTarget.setPointerCapture(event.pointerId);
+  const beginAt = (clientX: number, clientY: number) => {
     activeRef.current = true;
     setPathValue([]);
+    setLinePointsValue([]);
+    setPointerPoint(pointFromClient(clientX, clientY));
     setStatus("继续连接");
-    const node = nodeFromPoint(event.clientX, event.clientY);
+    const node = nodeFromPoint(clientX, clientY);
     if (node) addNode(node);
   };
 
-  const move = (event: ReactPointerEvent<HTMLDivElement>) => {
+  const moveAt = (clientX: number, clientY: number) => {
     if (!activeRef.current) return;
-    const node = nodeFromPoint(event.clientX, event.clientY);
+    setPointerPoint(pointFromClient(clientX, clientY));
+    const node = nodeFromPoint(clientX, clientY);
     if (node) addNode(node);
+  };
+
+  const pointFromTouchEvent = (event: ReactTouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0] ?? event.changedTouches[0];
+    return touch ? { clientX: touch.clientX, clientY: touch.clientY } : null;
+  };
+
+  const beginTouch = (event: ReactTouchEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    lastTouchRef.current = window.Date.now();
+    const point = pointFromTouchEvent(event);
+    if (point) beginAt(point.clientX, point.clientY);
+  };
+
+  const moveTouch = (event: ReactTouchEvent<HTMLDivElement>) => {
+    if (!activeRef.current) return;
+    event.preventDefault();
+    lastTouchRef.current = window.Date.now();
+    const point = pointFromTouchEvent(event);
+    if (point) moveAt(point.clientX, point.clientY);
+  };
+
+  const finishTouch = (event: ReactTouchEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    lastTouchRef.current = window.Date.now();
+    finish();
+  };
+
+  const beginMouse = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (window.Date.now() - lastTouchRef.current < 700) return;
+    event.preventDefault();
+    beginAt(event.clientX, event.clientY);
+  };
+
+  const moveMouse = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (!activeRef.current) return;
+    event.preventDefault();
+    moveAt(event.clientX, event.clientY);
+  };
+
+  const finishMouse = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (!activeRef.current) return;
+    event.preventDefault();
+    finish();
   };
 
   const finish = () => {
@@ -5931,32 +5993,50 @@ function PatternPad({ onComplete }: { onComplete: (pattern: string) => void }) {
       setStatus("至少连接 4 个点");
       window.setTimeout(() => {
         setPathValue([]);
+        setLinePointsValue([]);
+        setPointerPoint(null);
         setStatus("按住星点滑动");
       }, 650);
       return;
     }
     onComplete(pattern);
     setPathValue([]);
+    setLinePointsValue([]);
+    setPointerPoint(null);
     setStatus("按住星点滑动");
   };
 
+  const drawPoints = pointerPoint && linePoints.length ? [...linePoints, pointerPoint] : linePoints;
+
   return (
     <>
-      <div className="profile-pattern-grid" onPointerDown={begin} onPointerMove={move} onPointerUp={finish} onPointerCancel={finish} onPointerLeave={finish}>
-        {path.length > 1 ? (
-          <svg className="profile-pattern-canvas" viewBox="0 0 240 240" aria-hidden="true">
-            <polyline points={path.map((node) => `${patternNodePoints[node - 1]?.x ?? 0},${patternNodePoints[node - 1]?.y ?? 0}`).join(" ")} />
+      <div
+        ref={gridRef}
+        className="profile-pattern-grid"
+        role="application"
+        aria-label="图案解锁九宫格"
+        onTouchStart={beginTouch}
+        onTouchMove={moveTouch}
+        onTouchEnd={finishTouch}
+        onTouchCancel={finishTouch}
+        onMouseDown={beginMouse}
+        onMouseMove={moveMouse}
+        onMouseUp={finishMouse}
+        onMouseLeave={finishMouse}
+      >
+        {drawPoints.length > 1 ? (
+          <svg className="profile-pattern-canvas" aria-hidden="true">
+            <polyline points={drawPoints.map((point) => `${point.x},${point.y}`).join(" ")} />
           </svg>
         ) : null}
         {Array.from({ length: 9 }, (_, index) => (
-          <button
+          <span
             key={index}
             ref={(element) => {
               nodeRefs.current[index] = element;
             }}
             className={path.includes(index + 1) ? "profile-pattern-node lit" : "profile-pattern-node"}
-            type="button"
-            aria-label={`图案点 ${index + 1}`}
+            aria-hidden="true"
           />
         ))}
       </div>

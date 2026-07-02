@@ -1,4 +1,11 @@
-import { type PointerEvent as ReactPointerEvent, type RefObject, useEffect, useRef, useState } from "react";
+import {
+  type MouseEvent as ReactMouseEvent,
+  type RefObject,
+  type TouchEvent as ReactTouchEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { joinChildFamily, joinFamily, loginAuth, loginChildByInvite, registerAuth, type AuthSession, type UnlockType } from "../services/auth";
 import "../styles/auth-page.css";
 
@@ -182,9 +189,10 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
   const [pinMode, setPinMode] = useState<"pin" | "pattern">("pin");
   const [patternPath, setPatternPath] = useState<number[]>([]);
   const [patternStatus, setPatternStatus] = useState("滑动连接点来解锁");
-  const patternNodeRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const patternNodeRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const patternPathRef = useRef<number[]>([]);
   const patternActiveRef = useRef(false);
+  const lastPatternTouchRef = useRef(0);
   const unlockDelayRef = useRef<number | null>(null);
 
   useStarfield(canvasRef, screen !== "childPin");
@@ -451,20 +459,64 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
     return null;
   };
 
-  const beginPattern = (event: ReactPointerEvent<HTMLDivElement>) => {
+  const beginPatternAt = (clientX: number, clientY: number) => {
     if (pending) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
     patternActiveRef.current = true;
     setPatternPathValue([]);
     setPatternStatus("继续连接星点");
-    const node = nodeFromPoint(event.clientX, event.clientY);
+    const node = nodeFromPoint(clientX, clientY);
     if (node) addPatternNode(node);
   };
 
-  const movePattern = (event: ReactPointerEvent<HTMLDivElement>) => {
+  const movePatternAt = (clientX: number, clientY: number) => {
     if (!patternActiveRef.current || pending) return;
-    const node = nodeFromPoint(event.clientX, event.clientY);
+    const node = nodeFromPoint(clientX, clientY);
     if (node) addPatternNode(node);
+  };
+
+  const pointFromTouchEvent = (event: ReactTouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0] ?? event.changedTouches[0];
+    return touch ? { clientX: touch.clientX, clientY: touch.clientY } : null;
+  };
+
+  const beginPatternTouch = (event: ReactTouchEvent<HTMLDivElement>) => {
+    if (pending) return;
+    event.preventDefault();
+    lastPatternTouchRef.current = window.Date.now();
+    const point = pointFromTouchEvent(event);
+    if (point) beginPatternAt(point.clientX, point.clientY);
+  };
+
+  const movePatternTouch = (event: ReactTouchEvent<HTMLDivElement>) => {
+    if (!patternActiveRef.current || pending) return;
+    event.preventDefault();
+    lastPatternTouchRef.current = window.Date.now();
+    const point = pointFromTouchEvent(event);
+    if (point) movePatternAt(point.clientX, point.clientY);
+  };
+
+  const finishPatternTouch = (event: ReactTouchEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    lastPatternTouchRef.current = window.Date.now();
+    finishPattern();
+  };
+
+  const beginPatternMouse = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (window.Date.now() - lastPatternTouchRef.current < 700) return;
+    event.preventDefault();
+    beginPatternAt(event.clientX, event.clientY);
+  };
+
+  const movePatternMouse = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (!patternActiveRef.current) return;
+    event.preventDefault();
+    movePatternAt(event.clientX, event.clientY);
+  };
+
+  const finishPatternMouse = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (!patternActiveRef.current) return;
+    event.preventDefault();
+    finishPattern();
   };
 
   const finishPattern = () => {
@@ -680,7 +732,62 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
               <BackButton onClick={() => move("childLogin")} label="换一个人" />
               <div style={{ fontSize: 52, marginBottom: 8 }}>{displayAvatar}</div><div style={{ fontSize: 18, fontWeight: 700, color: "var(--text0)", marginBottom: 4 }}>{displayChild}，你好！</div><div style={{ fontSize: 13, color: "var(--text2)", marginBottom: 24 }}>输入 4 位密码解锁</div>
               <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}><div style={{ display: "flex", background: "rgba(255,255,255,.05)", border: "1px solid var(--bd)", borderRadius: 99, padding: 3, gap: 3 }}><button type="button" className="auth-mode-button" style={pinMode === "pin" ? activeModeStyle : undefined} onClick={() => { setPinMode("pin"); setPatternPathValue([]); setPatternStatus("滑动连接点来解锁"); }}>🔢 数字密码</button><button type="button" className="auth-mode-button" style={pinMode === "pattern" ? activeModeStyle : undefined} onClick={() => { setPinMode("pattern"); setPin(""); }}>🔣 图案解锁</button></div></div>
-              {pinMode === "pin" ? <><div className="pin-row">{Array.from({ length: 4 }, (_, index) => <div key={index} className={`pin-box ${index < pin.length ? "filled" : ""} ${index === pin.length && pin.length < 4 ? "active" : ""}`} />)}</div><div className="numpad">{["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((key) => <button type="button" className="npk" key={key} onClick={() => enterPin(key)} disabled={pending}><div className="npk-num">{key}</div></button>)}<div /><button type="button" className="npk zero" onClick={() => enterPin("0")} disabled={pending}><div className="npk-num">0</div></button><button type="button" className="npk del" onClick={deletePin} disabled={pending}><div className="npk-num">⌫</div></button></div></> : <div className="pattern-wrap"><div className="pattern-grid live" onPointerDown={beginPattern} onPointerMove={movePattern} onPointerUp={finishPattern} onPointerCancel={finishPattern} onPointerLeave={finishPattern}>{patternPath.length > 1 ? <svg className="pattern-canvas" viewBox="0 0 240 240" aria-hidden="true"><polyline points={patternPath.map((node) => `${patternNodePoints[node - 1]?.x ?? 0},${patternNodePoints[node - 1]?.y ?? 0}`).join(" ")} /></svg> : null}{Array.from({ length: 9 }, (_, index) => <button type="button" ref={(element) => { patternNodeRefs.current[index] = element; }} className={`pat-node ${patternPath.includes(index + 1) ? "lit" : ""}`} key={index} aria-label={`图案点 ${index + 1}`} disabled={pending} />)}</div><div className="pattern-status">{pending ? "正在登录..." : patternStatus}</div></div>}
+              {pinMode === "pin" ? (
+                <>
+                  <div className="pin-row">
+                    {Array.from({ length: 4 }, (_, index) => (
+                      <div key={index} className={`pin-box ${index < pin.length ? "filled" : ""} ${index === pin.length && pin.length < 4 ? "active" : ""}`} />
+                    ))}
+                  </div>
+                  <div className="numpad">
+                    {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((key) => (
+                      <button type="button" className="npk" key={key} onClick={() => enterPin(key)} disabled={pending}>
+                        <div className="npk-num">{key}</div>
+                      </button>
+                    ))}
+                    <div />
+                    <button type="button" className="npk zero" onClick={() => enterPin("0")} disabled={pending}>
+                      <div className="npk-num">0</div>
+                    </button>
+                    <button type="button" className="npk del" onClick={deletePin} disabled={pending}>
+                      <div className="npk-num">⌫</div>
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="pattern-wrap">
+                  <div
+                    className="pattern-grid live"
+                    role="application"
+                    aria-label="图案解锁九宫格"
+                    onTouchStart={beginPatternTouch}
+                    onTouchMove={movePatternTouch}
+                    onTouchEnd={finishPatternTouch}
+                    onTouchCancel={finishPatternTouch}
+                    onMouseDown={beginPatternMouse}
+                    onMouseMove={movePatternMouse}
+                    onMouseUp={finishPatternMouse}
+                    onMouseLeave={finishPatternMouse}
+                  >
+                    {patternPath.length > 1 ? (
+                      <svg className="pattern-canvas" viewBox="0 0 240 240" aria-hidden="true">
+                        <polyline points={patternPath.map((node) => `${patternNodePoints[node - 1]?.x ?? 0},${patternNodePoints[node - 1]?.y ?? 0}`).join(" ")} />
+                      </svg>
+                    ) : null}
+                    {Array.from({ length: 9 }, (_, index) => (
+                      <span
+                        ref={(element) => {
+                          patternNodeRefs.current[index] = element;
+                        }}
+                        className={`pat-node ${patternPath.includes(index + 1) ? "lit" : ""}`}
+                        key={index}
+                        aria-hidden="true"
+                      />
+                    ))}
+                  </div>
+                  <div className="pattern-status">{pending ? "正在登录..." : patternStatus}</div>
+                </div>
+              )}
             </div>
           ) : null}
 

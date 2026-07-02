@@ -1,13 +1,13 @@
-const CACHE_NAME = "parentbond-shell-v20260701b";
+const CACHE_NAME = "parentbond-shell-v20260702a";
 const SHELL_URLS = ["/manifest.webmanifest", "/icon.svg"];
 const OFFLINE_HTML = `<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>ParentBond</title>
     <style>
-      html,body{margin:0;min-height:100%;background:#0d1b3e;color:#f8f4ee;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Microsoft YaHei",sans-serif}
+      html,body{margin:0;min-height:100%;max-width:100%;overflow-x:hidden;background:#0d1b3e;color:#f8f4ee;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Microsoft YaHei",sans-serif;-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:pan-y}
       main{min-height:100vh;display:grid;place-items:center;padding:24px;text-align:center;background:radial-gradient(circle at 70% 10%,rgba(245,200,66,.18),transparent 240px),#0d1b3e}
       section{max-width:320px;border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:24px;background:rgba(26,58,107,.58)}
       h1{margin:0 0 8px;font-size:22px}
