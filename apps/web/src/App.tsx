@@ -1244,20 +1244,19 @@ export function App({
     setTimerRunning(true);
   };
 
-  const restartFocusTimer = () => {
-    if (timerRunning) flushFocusProgress();
-    if (focusMode === "task" && activeFocusTask && !activeFocusTask.completedAt) {
-      setTaskFocusTimer({
-        taskId: activeFocusTask.id,
-        secondsLeft: activeFocusTask.estimatedMinutes * 60,
-        totalSeconds: activeFocusTask.estimatedMinutes * 60,
-      });
-    } else {
-      setDailyFocusSecondsLeft(25 * 60);
-    }
-    setFocusSessionFinished(false);
-    focusRoundCountedRef.current = false;
-    setTimerRunning(true);
+  const finishFocusEarly = () => {
+    if (focusSessionFinished) return;
+    if (focusMode === "task" && (!activeFocusTask || activeFocusTask.completedAt)) return;
+
+    collectFocusElapsedUntilNow();
+    flushFocusProgress(false);
+    setTimerRunning(false);
+    setFocusSessionFinished(true);
+    setTaskFeedback(
+      focusMode === "task"
+        ? "本轮专注已结束，确认一下这项任务是否完成"
+        : "本轮番茄已结束，休息一下再继续",
+    );
   };
 
   const extendFocusTimer = () => {
@@ -1566,7 +1565,7 @@ export function App({
                 onSelectDailyFocus={setDailyFocus}
                 onSelectTaskFocus={setTaskFocusMode}
                 onToggleTimer={toggleFocusTimer}
-                onRestartTimer={restartFocusTimer}
+                onEndFocus={finishFocusEarly}
                 onGoToTasks={() => navigateToView("tasks")}
               />
             )
@@ -3071,7 +3070,7 @@ function FocusView({
   onSelectDailyFocus,
   onSelectTaskFocus,
   onToggleTimer,
-  onRestartTimer,
+  onEndFocus,
   onGoToTasks,
 }: {
   secondsLeft: number;
@@ -3088,7 +3087,7 @@ function FocusView({
   onSelectDailyFocus: () => void;
   onSelectTaskFocus: () => void;
   onToggleTimer: () => void;
-  onRestartTimer: () => void;
+  onEndFocus: () => void;
   onGoToTasks: () => void;
 }) {
   const taskReady = Boolean(focusTask && !focusTask.completedAt);
@@ -3118,6 +3117,9 @@ function FocusView({
     : timerRunning
       ? "专注中…"
       : "点击开始";
+
+  const hasFocusProgress = secondsLeft < focusRoundSeconds;
+  const canEnd = canRun && (timerRunning || hasFocusProgress);
 
   return (
     <section className="focus-page">
@@ -3221,10 +3223,6 @@ function FocusView({
 
             {!sessionFinished && !taskCompleted && (
               <div className="focus-main-action focus-actions">
-                <button className="focus-secondary-action" type="button" onClick={onRestartTimer}>
-                  <span aria-hidden="true">✕</span>
-                  重置
-                </button>
                 <button
                   className="primary-button purple full"
                   type="button"
@@ -3233,6 +3231,10 @@ function FocusView({
                 >
                   <span className="focus-action-glyph" aria-hidden="true">{timerRunning ? "⏸" : "▶"}</span>
                   {timerRunning ? "暂停" : "开始专注"}
+                </button>
+                <button className="focus-secondary-action focus-end-action" type="button" onClick={onEndFocus} disabled={!canEnd}>
+                  <span aria-hidden="true">✓</span>
+                  结束
                 </button>
               </div>
             )}
@@ -3293,7 +3295,7 @@ function FocusCompletionOverlay({
         </>
       ) : focusMode === "task" && taskReady ? (
         <>
-          <strong className="focus-completion-title">番茄完成！</strong>
+          <strong className="focus-completion-title">本轮结束</strong>
           <span className="focus-completion-sub">本轮专注结束<br />你刚才在做这项任务：</span>
           <div className="focus-completion-task-box">
             <strong>{focusTask?.title}</strong>
@@ -3315,7 +3317,7 @@ function FocusCompletionOverlay({
         </>
       ) : (
         <>
-          <strong className="focus-completion-title">番茄完成！</strong>
+          <strong className="focus-completion-title">本轮结束</strong>
           <span className="focus-completion-sub">这一轮专注结束<br />先喝口水，准备好再开下一轮。</span>
           <div className="focus-completion-actions">
             <button className="focus-overlay-purple" type="button" onClick={onExtendTimer}>
