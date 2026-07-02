@@ -67,6 +67,15 @@ interface ApiEnvelope<T> {
   message: string;
 }
 
+function apiErrorMessage(body: unknown) {
+  if (!body || typeof body !== "object") return "";
+  const message = (body as { message?: unknown }).message;
+  if (Array.isArray(message)) return message.filter(Boolean).join("，");
+  if (typeof message === "string") return message;
+  const error = (body as { error?: unknown }).error;
+  return typeof error === "string" ? error : "";
+}
+
 function toTaskSaveInput(task: HomeworkTask) {
   return {
     id: task.id,
@@ -87,11 +96,27 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
     },
   });
 
-  if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
+  const text = await response.text();
+  let body: ApiEnvelope<T> | T | { message?: unknown; error?: unknown } | null = null;
+  if (text.trim()) {
+    try {
+      body = JSON.parse(text) as ApiEnvelope<T> | T | { message?: unknown; error?: unknown };
+    } catch {
+      throw new Error(
+        response.ok
+          ? "服务返回了无法识别的数据，请确认前后端版本一致"
+          : `API request failed: ${response.status}`,
+      );
+    }
   }
 
-  const body = (await response.json()) as ApiEnvelope<T> | T;
+  if (!response.ok) {
+    throw new Error(apiErrorMessage(body) || `API request failed: ${response.status}`);
+  }
+
+  if (!body) {
+    throw new Error("服务暂时没有返回数据，请稍后重试");
+  }
 
   if (body && typeof body === "object" && "code" in body && "data" in body) {
     const envelope = body as ApiEnvelope<T>;

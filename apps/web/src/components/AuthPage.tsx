@@ -41,17 +41,7 @@ const avatars = [
   ["🚀", "火箭"],
 ] as const;
 
-const patternNodePoints = [
-  { x: 44, y: 44 },
-  { x: 120, y: 44 },
-  { x: 196, y: 44 },
-  { x: 44, y: 120 },
-  { x: 120, y: 120 },
-  { x: 196, y: 120 },
-  { x: 44, y: 196 },
-  { x: 120, y: 196 },
-  { x: 196, y: 196 },
-];
+const patternHitRadius = 23;
 
 type SavedChildLogin = {
   username: string;
@@ -188,9 +178,13 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
   const [pin, setPin] = useState("");
   const [pinMode, setPinMode] = useState<"pin" | "pattern">("pin");
   const [patternPath, setPatternPath] = useState<number[]>([]);
+  const [patternLinePoints, setPatternLinePoints] = useState<Array<{ x: number; y: number }>>([]);
+  const [patternPointerPoint, setPatternPointerPoint] = useState<{ x: number; y: number } | null>(null);
   const [patternStatus, setPatternStatus] = useState("滑动连接点来解锁");
+  const patternGridRef = useRef<HTMLDivElement | null>(null);
   const patternNodeRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const patternPathRef = useRef<number[]>([]);
+  const patternLinePointsRef = useRef<Array<{ x: number; y: number }>>([]);
   const patternActiveRef = useRef(false);
   const lastPatternTouchRef = useRef(0);
   const unlockDelayRef = useRef<number | null>(null);
@@ -379,7 +373,10 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
     if (!savedChild) {
       setPin("");
       setPatternPath([]);
+      setPatternLinePoints([]);
+      setPatternPointerPoint(null);
       patternPathRef.current = [];
+      patternLinePointsRef.current = [];
       setToast("请输入家庭邀请码和 PIN 登录");
       move("childInviteLogin");
       return;
@@ -393,7 +390,10 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
     } finally {
       setPin("");
       setPatternPath([]);
+      setPatternLinePoints([]);
+      setPatternPointerPoint(null);
       patternPathRef.current = [];
+      patternLinePointsRef.current = [];
       setPatternStatus("滑动连接点来解锁");
       setPending(false);
     }
@@ -435,10 +435,42 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
     setPatternPath(next);
   };
 
+  const setPatternLinePointsValue = (next: Array<{ x: number; y: number }>) => {
+    patternLinePointsRef.current = next;
+    setPatternLinePoints(next);
+  };
+
+  const pointFromClient = (clientX: number, clientY: number) => {
+    const grid = patternGridRef.current;
+    if (!grid) return null;
+    const rect = grid.getBoundingClientRect();
+    return {
+      x: Math.min(Math.max(clientX - rect.left, 0), rect.width),
+      y: Math.min(Math.max(clientY - rect.top, 0), rect.height),
+    };
+  };
+
+  const centerOfPatternNode = (nodeNumber: number) => {
+    const grid = patternGridRef.current;
+    const node = patternNodeRefs.current[nodeNumber - 1];
+    if (!grid || !node) return null;
+    const gridRect = grid.getBoundingClientRect();
+    const rect = node.getBoundingClientRect();
+    return {
+      x: rect.left + rect.width / 2 - gridRect.left,
+      y: rect.top + rect.height / 2 - gridRect.top,
+    };
+  };
+
   const addPatternNode = (node: number) => {
     const current = patternPathRef.current;
     if (current.includes(node)) return;
     setPatternPathValue([...current, node]);
+    const center = centerOfPatternNode(node);
+    if (center) {
+      setPatternLinePointsValue([...patternLinePointsRef.current, center]);
+      setPatternPointerPoint(center);
+    }
     setPatternStatus(current.length >= 2 ? "松手完成解锁" : "继续连接星点");
   };
 
@@ -446,13 +478,9 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
     for (const [index, node] of patternNodeRefs.current.entries()) {
       if (!node) continue;
       const rect = node.getBoundingClientRect();
-      const hitPadding = 14;
-      if (
-        clientX >= rect.left - hitPadding &&
-        clientX <= rect.right + hitPadding &&
-        clientY >= rect.top - hitPadding &&
-        clientY <= rect.bottom + hitPadding
-      ) {
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      if (Math.hypot(clientX - centerX, clientY - centerY) <= patternHitRadius) {
         return index + 1;
       }
     }
@@ -463,6 +491,8 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
     if (pending) return;
     patternActiveRef.current = true;
     setPatternPathValue([]);
+    setPatternLinePointsValue([]);
+    setPatternPointerPoint(pointFromClient(clientX, clientY));
     setPatternStatus("继续连接星点");
     const node = nodeFromPoint(clientX, clientY);
     if (node) addPatternNode(node);
@@ -470,6 +500,7 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
 
   const movePatternAt = (clientX: number, clientY: number) => {
     if (!patternActiveRef.current || pending) return;
+    setPatternPointerPoint(pointFromClient(clientX, clientY));
     const node = nodeFromPoint(clientX, clientY);
     if (node) addPatternNode(node);
   };
@@ -527,10 +558,13 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
       setPatternStatus("至少连接 4 个点");
       window.setTimeout(() => {
         setPatternPathValue([]);
+        setPatternLinePointsValue([]);
+        setPatternPointerPoint(null);
         setPatternStatus("滑动连接点来解锁");
       }, 650);
       return;
     }
+    setPatternPointerPoint(null);
     setPatternStatus("正在验证图案...");
     scheduleCredentialLogin(pattern, "pattern");
   };
@@ -540,6 +574,7 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
   const displayChild = session?.user.childName || savedChild?.childName || childName || "小明";
   const displayGrade = session?.user.childGrade || savedChild?.childGrade || childGrade;
   const displayAvatar = session?.user.childAvatar || savedChild?.childAvatar || childAvatar;
+  const patternDrawPoints = patternPointerPoint && patternLinePoints.length ? [...patternLinePoints, patternPointerPoint] : patternLinePoints;
   return (
     <main className="auth-page" aria-label="ParentBond 注册和登录">
       <section className="shell">
@@ -757,6 +792,7 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
               ) : (
                 <div className="pattern-wrap">
                   <div
+                    ref={patternGridRef}
                     className="pattern-grid live"
                     role="application"
                     aria-label="图案解锁九宫格"
@@ -769,9 +805,9 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (session: AuthS
                     onMouseUp={finishPatternMouse}
                     onMouseLeave={finishPatternMouse}
                   >
-                    {patternPath.length > 1 ? (
-                      <svg className="pattern-canvas" viewBox="0 0 240 240" aria-hidden="true">
-                        <polyline points={patternPath.map((node) => `${patternNodePoints[node - 1]?.x ?? 0},${patternNodePoints[node - 1]?.y ?? 0}`).join(" ")} />
+                    {patternDrawPoints.length > 1 ? (
+                      <svg className="pattern-canvas" aria-hidden="true">
+                        <polyline points={patternDrawPoints.map((point) => `${point.x},${point.y}`).join(" ")} />
                       </svg>
                     ) : null}
                     {Array.from({ length: 9 }, (_, index) => (

@@ -1,5 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700;800;900&display=swap');
 .auth-page,.auth-page *,.auth-page *::before,.auth-page *::after{box-sizing:border-box;margin:0;padding:0}
+.auth-page,.auth-page *{scrollbar-width:none;-ms-overflow-style:none}
+.auth-page::-webkit-scrollbar,.auth-page *::-webkit-scrollbar{width:0;height:0;display:none;background:transparent}
 .auth-page{
   --bg0:#050B16;--bg1:#0B1730;--bg2:#0F1E3A;--bg3:#162444;
   --gold:#F5C842;--gold2:#FFE085;--gold3:#8A6800;
@@ -58,7 +60,7 @@ canvas.sf{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
 .o3{width:240px;height:240px;background:radial-gradient(circle,rgba(61,214,140,.06) 0%,transparent 70%);bottom:80px;right:-80px}
 
 /* scroll */
-.scroll{position:relative;z-index:10;height:852px;padding:32px 22px 40px;overflow-y:auto;background:transparent}
+.scroll{position:relative;z-index:10;height:852px;padding:32px 22px 40px;overflow-y:auto;background:transparent;scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch}
 .scroll::-webkit-scrollbar{display:none}
 
 /* 鈺愨晲鈺?ANIMATIONS 鈺愨晲鈺?*/
@@ -333,7 +335,7 @@ canvas.sf{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
 .toggle.on .toggle-thumb{transform:translateX(20px)}
 
 /* grade selector */
-.grade-scroll{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px}
+.grade-scroll{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch}
 .grade-scroll::-webkit-scrollbar{display:none}
 .grade-chip{flex-shrink:0;padding:8px 14px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--bd);color:var(--text2);background:rgba(255,255,255,.04);transition:all .2s;white-space:nowrap}
 .grade-chip.sel{background:rgba(167,139,250,.18);border-color:rgba(167,139,250,.35);color:var(--purple2)}

@@ -109,6 +109,7 @@ type StoredTaskFocusSession = {
 
 const TASK_FOCUS_STORAGE_KEY = "parentbond.task-focus.v1";
 const FOCUS_AUTO_FLUSH_SECONDS = 60;
+const PATTERN_HIT_RADIUS = 23;
 
 const moodOptions = [
   { mood: "😊", label: "开心" },
@@ -2063,8 +2064,8 @@ function ParentHomeView({
           <span>写记录</span>
         </button>
         <button className="parent-qa" type="button" onClick={() => setActiveView("memory")}>
-          <span className="parent-qa-icon green">💌</span>
-          <span>未来信</span>
+          <span className="parent-qa-icon green">💬</span>
+          <span>心情分享</span>
         </button>
       </div>
 
@@ -4575,7 +4576,7 @@ function WalletView({
 
       <div className="parent-sec-row">
         <div className="parent-sec-title">本月收支</div>
-        <button className="sec-m wallet-sec-action" type="button">年度报告</button>
+        <button className="sec-m wallet-sec-action" type="button" onClick={() => setFeedback("年度报告会根据真实账单自动生成，当前先展示本月收支趋势")}>年度报告</button>
       </div>
       <div className="month-chart">
         <div className="mc-head">
@@ -5916,8 +5917,9 @@ function PatternPad({ onComplete }: { onComplete: (pattern: string) => void }) {
     for (const [index, node] of nodeRefs.current.entries()) {
       if (!node) continue;
       const rect = node.getBoundingClientRect();
-      const padding = 14;
-      if (clientX >= rect.left - padding && clientX <= rect.right + padding && clientY >= rect.top - padding && clientY <= rect.bottom + padding) {
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      if (Math.hypot(clientX - centerX, clientY - centerY) <= PATTERN_HIT_RADIUS) {
         return index + 1;
       }
     }
